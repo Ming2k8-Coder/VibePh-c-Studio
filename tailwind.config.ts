@@ -33,8 +33,8 @@ export default {
         'cyber-glow': '0 0 25px rgba(204, 255, 0, 0.3)',
       },
       fontFamily: {
-        imperial: ['Cinzel', 'Be Vietnam Pro', 'serif'],
-        sans: ['Be Vietnam Pro', 'system-ui', 'sans-serif'],
+        imperial: ['"Playfair Display"', '"Cormorant Garamond"', '"Be Vietnam Pro"', 'serif'],
+        sans: ['"Be Vietnam Pro"', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         'm3-sm': '8px',

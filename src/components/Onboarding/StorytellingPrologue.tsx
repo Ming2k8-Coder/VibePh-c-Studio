@@ -4,8 +4,6 @@ import {
   Sparkles, 
   ChevronRight, 
   RotateCcw, 
-  Volume2, 
-  VolumeX, 
   ArrowDown, 
   ShieldCheck, 
   Check, 
@@ -30,7 +28,6 @@ export const StorytellingPrologue: React.FC<StorytellingPrologueProps> = ({ onCo
   const containerRef = useRef<HTMLDivElement>(null);
   const shouldReduceMotion = useReducedMotion();
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [isAudioEnabled, setIsAudioEnabled] = useState<boolean>(true);
 
   // Scroll tracking across the 300vh container
   const { scrollYProgress } = useScroll({
@@ -46,50 +43,19 @@ export const StorytellingPrologue: React.FC<StorytellingPrologueProps> = ({ onCo
   const cyberGlowOpacity = useTransform(scrollYProgress, [0.7, 0.95], [0, 1]);
   const streetOverlayScale = useTransform(scrollYProgress, [0.75, 1], [0.95, 1]);
 
-  // Audio synthesize chime
-  const playChime = (freq = 440) => {
-    if (!isAudioEnabled || typeof window === 'undefined') return;
-    try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.6);
-    } catch {
-      // AudioContext muted/unsupported
-    }
-  };
-
   // Sync scroll progress to active step
   useEffect(() => {
     const unsubscribe = scrollYProgress.on('change', (v) => {
       if (v < 0.35) {
-        if (activeStep !== 0) {
-          setActiveStep(0);
-          playChime(329.63); // E4
-        }
+        if (activeStep !== 0) setActiveStep(0);
       } else if (v < 0.70) {
-        if (activeStep !== 1) {
-          setActiveStep(1);
-          playChime(440); // A4
-        }
+        if (activeStep !== 1) setActiveStep(1);
       } else {
-        if (activeStep !== 2) {
-          setActiveStep(2);
-          playChime(554.37); // C#5
-        }
+        if (activeStep !== 2) setActiveStep(2);
       }
     });
     return () => unsubscribe();
-  }, [scrollYProgress, activeStep, isAudioEnabled]);
+  }, [scrollYProgress, activeStep]);
 
   const scrollToPhase = (targetProgress: number) => {
     if (!containerRef.current) return;
@@ -143,15 +109,8 @@ export const StorytellingPrologue: React.FC<StorytellingPrologueProps> = ({ onCo
         {/* Action Controls */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-            className="p-2 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
-            title={isAudioEnabled ? 'Tắt âm thanh trải nghiệm' : 'Bật âm thanh'}
-          >
-            {isAudioEnabled ? <Volume2 className="w-4 h-4 text-heritage-hoang" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-          <button
             onClick={onSkip}
-            className="text-xs px-4 py-2 rounded-m3-full border border-white/20 bg-white/5 hover:bg-white/10 text-neutral-200 transition-all font-medium flex items-center gap-1.5"
+            className="text-xs px-4 py-2 rounded-m3-full border border-white/20 bg-white/5 hover:bg-white/10 text-neutral-200 transition-all font-medium flex items-center gap-1.5 cursor-pointer"
           >
             Bỏ qua mở đầu
             <ChevronRight className="w-3.5 h-3.5" />

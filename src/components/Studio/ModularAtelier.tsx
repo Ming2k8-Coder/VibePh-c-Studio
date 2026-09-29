@@ -16,8 +16,7 @@ import {
   ShieldAlert,
   Palette,
   ExternalLink,
-  Shirt,
-  Volume2
+  Shirt
 } from 'lucide-react';
 import { 
   HeritageItem, 
@@ -61,11 +60,11 @@ export const ModularAtelier: React.FC<ModularAtelierProps> = ({
 
   // Atelier Outfit State
   const [atelierConfig, setAtelierConfig] = useState<AtelierConfiguration>({
-    baseItem: HERITAGE_CATALOG.find(i => i.id === 'base-trung-don') || null,
-    coreItem: HERITAGE_CATALOG.find(i => i.id === 'core-ngu-than-tay-chen') || null,
-    outerItem: HERITAGE_CATALOG.find(i => i.id === 'outer-bomber-thuy-ba') || null,
-    bottomItem: HERITAGE_CATALOG.find(i => i.id === 'bottom-cargo-parachute') || null,
-    accessoryItem: HERITAGE_CATALOG.find(i => i.id === 'acc-khan-dong-7-vong') || null,
+    baseItem: (HERITAGE_CATALOG as any[]).find((i: any) => i.id === 'base-trung-don') || null,
+    coreItem: (HERITAGE_CATALOG as any[]).find((i: any) => i.id === 'core-ngu-than-tay-chen') || null,
+    outerItem: (HERITAGE_CATALOG as any[]).find((i: any) => i.id === 'outer-bomber-thuy-ba') || null,
+    bottomItem: (HERITAGE_CATALOG as any[]).find((i: any) => i.id === 'bottom-cargo-parachute') || null,
+    accessoryItem: (HERITAGE_CATALOG as any[]).find((i: any) => i.id === 'acc-khan-dong-7-vong') || null,
     customClosureOverride: 'HUU_NHAM',
     customButtonOverride: 5,
   });
@@ -124,26 +123,6 @@ export const ModularAtelier: React.FC<ModularAtelierProps> = ({
       setTaNhamAlertMessage(
         'ĐẠI KỴ TẢ NHẬM (左衽): Cài vạt áo sang bên trái là quy thức tang lễ cổ truyền chỉ dùng khi liệm thi thể người mất. Trong văn hóa cổ phục Việt Nam, người sống tuyệt đối luôn cài Hữu Nhậm (Vạt trái phủ lên vạt phải).'
       );
-
-      // Play soft alert beep
-      try {
-        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(220, ctx.currentTime);
-          gain.gain.setValueAtTime(0.08, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.4);
-        }
-      } catch {
-        // audio muted
-      }
 
       // Automatically elastic bounce back to HUU_NHAM after shake
       setTimeout(() => {
@@ -605,7 +584,7 @@ export const ModularAtelier: React.FC<ModularAtelierProps> = ({
 
             {/* Catalog Items for Active Slot */}
             <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-              {HERITAGE_CATALOG.filter(item => item.slot === activeSlot).map((item) => {
+              {(HERITAGE_CATALOG as any[]).filter((item: any) => item.slot === activeSlot).map((item: any) => {
                 const isCurrentActive = 
                   (activeSlot === 'base' && atelierConfig.baseItem?.id === item.id) ||
                   (activeSlot === 'core' && atelierConfig.coreItem?.id === item.id) ||

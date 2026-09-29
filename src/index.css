@@ -24,7 +24,8 @@
   }
 
   h1, h2, h3, .font-imperial {
-    font-family: 'Cinzel', 'Be Vietnam Pro', serif;
+    font-family: 'Playfair Display', 'Cormorant Garamond', 'Be Vietnam Pro', serif;
+    letter-spacing: -0.015em;
   }
 }
 
