@@ -1,0 +1,8 @@
+{
+  "name": "VibePhục Studio",
+  "description": "Vietnamese Heritage Fashion Remix Platform with Gemini AI, cultural guardrails, and Material 3 Expressive styling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

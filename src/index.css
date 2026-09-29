@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --color-obsidian-900: #0E0F12;
+  --color-obsidian-800: #16181D;
+  --color-obsidian-700: #22262F;
+  --color-heritage-son: #C53030;
+  --color-heritage-hoang: #D69E2E;
+  --color-heritage-cham: #1E3A8A;
+  --color-cyber-lime: #CCFF00;
+  --color-cyber-jade: #00F5D4;
+  --backdrop-blur-organza: 16px;
+  --shadow-heritage-glow: 0 0 25px rgba(214, 158, 46, 0.35);
+  --shadow-rule-error: 0 0 25px rgba(197, 48, 48, 0.55);
+  --shadow-cyber-glow: 0 0 25px rgba(204, 255, 0, 0.3);
+}
+
+@layer base {
+  body {
+    font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+    background-color: #0E0F12;
+    color: #E3E2E6;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-imperial {
+    font-family: 'Cinzel', 'Be Vietnam Pro', serif;
+  }
+}
+
+/* Material 3 Expressive Shape tokens */
+.rounded-m3-sm {
+  border-radius: 8px;
+}
+.rounded-m3-md {
+  border-radius: 16px;
+}
+.rounded-m3-lg {
+  border-radius: 28px;
+}
+.rounded-m3-xl {
+  border-radius: 36px;
+}
+.rounded-m3-asym {
+  border-radius: 28px 16px 28px 16px;
+}
+
+/* Hairline borders & Organza texture */
+.border-organza {
+  border-width: 0.5px;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.backdrop-blur-organza {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0E0F12;
+}
+::-webkit-scrollbar-thumb {
+  background: #22262F;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D69E2E;
+}
+
+/* Shake keyframes for Ta Nham taboo prevention */
+@keyframes taNhamShake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15% { transform: translateX(-8px) rotate(-1.5deg); }
+  30% { transform: translateX(8px) rotate(1.5deg); }
+  45% { transform: translateX(-6px) rotate(-1deg); }
+  60% { transform: translateX(6px) rotate(1deg); }
+  75% { transform: translateX(-3px) rotate(-0.5deg); }
+}
+
+.animate-ta-nham-shake {
+  animation: taNhamShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
