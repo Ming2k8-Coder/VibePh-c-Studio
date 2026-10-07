@@ -4,6 +4,7 @@ export default {
   content: [
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
+    './types/**/*.{js,ts,jsx,tsx}',
   ],
   darkMode: 'class',
   theme: {
@@ -15,22 +16,28 @@ export default {
           700: '#22262F',
         },
         heritage: {
-          son: '#C53030',    // Đỏ son cung đình (Chu sa)
-          hoang: '#D69E2E',  // Hoàng thổ / Chỉ vàng Chính Trung
-          cham: '#1E3A8A',   // Lam chàm truyền thống
+          son: '#C53030',
+          hoang: '#D69E2E',
+          cham: '#1E3A8A',
         },
         cyber: {
-          lime: '#CCFF00',   // Neon Gen Z streetwear accent
-          jade: '#00F5D4',   // Ngọc bích Cybernetic
+          lime: '#CCFF00',
+          jade: '#00F5D4',
         },
       },
       backdropBlur: {
         organza: '16px',
       },
       boxShadow: {
-        'heritage-glow': '0 0 25px rgba(214, 158, 46, 0.35)',
-        'rule-error': '0 0 25px rgba(197, 48, 48, 0.55)',
-        'cyber-glow': '0 0 25px rgba(204, 255, 0, 0.3)',
+        'heritage-glow': '0 0 25px -5px rgba(204, 255, 0, 0.25)',
+        'rule-error': '0 0 20px -2px rgba(197, 48, 48, 0.45)',
+      },
+      backgroundImage: {
+        'halftone-dot': 'radial-gradient(circle, currentColor 1.2px, transparent 1.2px)',
+        'halftone-heritage': 'radial-gradient(circle, rgba(214, 158, 46, 0.25) 1.5px, transparent 1.5px)',
+      },
+      backgroundSize: {
+        'halftone': '16px 16px',
       },
       fontFamily: {
         imperial: ['"Playfair Display"', '"Cormorant Garamond"', '"Be Vietnam Pro"', 'serif'],

@@ -6,6 +6,9 @@ import { checkCulturalGuardrails } from './src/server/culturalGuardrails';
 import { generateHeritageRemix } from './src/server/geminiService';
 import { getLookbooks, saveLookbook, getLookbooksCount } from './src/server/storageService';
 import { RemixRequest, ServerHealthInfo } from './src/types/lookbook';
+import { POST as athenyaPostHandler } from './app/api/athenya/route';
+import { GET as wikiGroundedGetHandler } from './app/api/wiki/grounded/route';
+import { POST as harmonyPostHandler } from './app/api/harmony/route';
 
 // Load environment variables
 dotenv.config();
@@ -144,6 +147,65 @@ app.post('/api/lookbooks', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[API POST /api/lookbooks] Error:', err);
     res.status(500).json({ error: 'Failed to save lookbook' });
+  }
+});
+
+/**
+ * POST /api/athenya
+ * Athenya persona chat & styling critique engine
+ */
+app.post('/api/athenya', async (req: Request, res: Response) => {
+  try {
+    const webReq = new globalThis.Request(`http://localhost:${PORT}/api/athenya`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+    const webRes = await athenyaPostHandler(webReq);
+    const data = await webRes.json();
+    res.status(webRes.status).json(data);
+  } catch (err) {
+    console.error('[API POST /api/athenya] Error:', err);
+    res.status(500).json({ error: 'Athenya persona engine failed' });
+  }
+});
+
+/**
+ * GET /api/wiki/grounded
+ * Grounded heritage search on museum and historical archives
+ */
+app.get('/api/wiki/grounded', async (req: Request, res: Response) => {
+  try {
+    const queryStr = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    const webReq = new globalThis.Request(`http://localhost:${PORT}/api/wiki/grounded${queryStr}`, {
+      method: 'GET'
+    });
+    const webRes = await wikiGroundedGetHandler(webReq);
+    const data = await webRes.json();
+    res.status(webRes.status).json(data);
+  } catch (err) {
+    console.error('[API GET /api/wiki/grounded] Error:', err);
+    res.status(500).json({ error: 'Wiki grounded query failed' });
+  }
+});
+
+/**
+ * POST /api/harmony
+ * Five Elements & Color Harmony calculation
+ */
+app.post('/api/harmony', async (req: Request, res: Response) => {
+  try {
+    const webReq = new globalThis.Request(`http://localhost:${PORT}/api/harmony`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+    const webRes = await harmonyPostHandler(webReq);
+    const data = await webRes.json();
+    res.status(webRes.status).json(data);
+  } catch (err) {
+    console.error('[API POST /api/harmony] Error:', err);
+    res.status(500).json({ error: 'Harmony calculation failed' });
   }
 });
 

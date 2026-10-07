@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+'use client';
+
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Eye,
@@ -13,7 +15,12 @@ import {
   Palette,
   Layers,
   ArrowRightLeft,
-  Check
+  Check,
+  Camera,
+  Upload,
+  X,
+  Smile,
+  Maximize2
 } from 'lucide-react';
 import { OutfitState, GarmentItem, AccessoryItem } from '../../types/vibephuc';
 
@@ -32,6 +39,9 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
 }) => {
   // Local Canvas Controls
   const [modelGender, setModelGender] = useState<'FEMALE' | 'MALE'>('FEMALE');
+  const [avatarRole, setAvatarRole] = useState<'STUDENT' | 'ROYAL'>('STUDENT');
+  const [skinToneType, setSkinToneType] = useState<'IVORY' | 'HONEY' | 'ROSE'>('IVORY');
+  const [displayMode, setDisplayMode] = useState<'FIGURE' | 'DRESS_FORM'>('FIGURE');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [visibleLayers, setVisibleLayers] = useState({
     base: true,
@@ -41,6 +51,76 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
     accessory: true,
     footwear: true
   });
+
+  // Camera / Face Try-On Modal State
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const startCamera = async () => {
+    setIsCameraModalOpen(true);
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 480, height: 480 }
+        });
+        setCameraStream(stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }
+    } catch (err) {
+      console.warn('Camera access denied or unavailable:', err);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setIsCameraModalOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(videoRef.current, 0, 0, 300, 300);
+      const dataUrl = canvas.toDataURL('image/png');
+      onUpdateOutfit(prev => ({
+        ...prev,
+        avatarType: 'CUSTOM_UPLOAD',
+        customAvatarUrl: dataUrl
+      }));
+    }
+    stopCamera();
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      onUpdateOutfit(prev => ({
+        ...prev,
+        avatarType: 'CUSTOM_UPLOAD',
+        customAvatarUrl: url
+      }));
+      setIsCameraModalOpen(false);
+    }
+  };
+
+  const handleResetFace = () => {
+    onUpdateOutfit(prev => ({
+      ...prev,
+      avatarType: 'FEMALE_STUDENT',
+      customAvatarUrl: undefined
+    }));
+  };
 
   // Color preset swatches for custom silk dyeing
   const SILK_PALETTES = [
@@ -55,9 +135,7 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
     { name: 'Cyber Jade', hex: '#00F5D4' }
   ];
 
-  const [activeColor, setActiveColor] = useState<string>(
-    outfit.coreGarment.defaultColor?.hex || '#1E3A8A'
-  );
+  const activeColor = outfit.customColors?.['core'] || outfit.coreGarment.defaultColor?.hex || '#C53030';
 
   const toggleLayer = (layerKey: keyof typeof visibleLayers) => {
     setVisibleLayers(prev => ({ ...prev, [layerKey]: !prev[layerKey] }));
@@ -65,127 +143,244 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
 
   const isTaNham = outfit.lapelMode === 'TA_NHAM';
   const isXRay = outfit.isXRayMode;
-  const coreId = outfit.coreGarment?.id || '';
-  const coreCat = outfit.coreGarment?.category;
 
-  // Check accessory flags
-  const hasNonQuaiThao = outfit.accessories.some(a => a.id === 'acc-non-quai-thao');
-  const hasNonLa = outfit.accessories.some(a => a.id === 'acc-non-la-hue');
-  const hasKhanRan = outfit.accessories.some(a => a.id === 'acc-khan-ran');
+  const coreCat = outfit.coreGarment.category;
+  const coreId = outfit.coreGarment.id;
+
+  // Has Sleeves flag: True for all traditional robes except bare Yếm alone
+  const hasFullSleeves = visibleLayers.core && outfit.coreGarment;
+
+  // Accessories flags
   const hasKiengBac = outfit.accessories.some(a => a.id === 'acc-kieng-bac');
-  const hasKhanVanh = outfit.accessories.some(a => a.id.includes('khan-vanh') || a.id.includes('khan-dong'));
+  const hasNonQuaiThao = outfit.accessories.some(a => a.id === 'acc-non-quai-thao');
+  const hasNonLa = outfit.accessories.some(a => a.id === 'acc-non-la');
+  const hasKhanVanh = outfit.accessories.some(a => a.id === 'acc-khan-vanh' || a.id === 'acc-khan-dong-nam');
+  const hasKhanRan = outfit.accessories.some(a => a.id === 'acc-khan-ran');
   const hasForeignObi = outfit.accessories.some(a => a.id === 'acc-foreign-kimono-obi');
   const hasForeignRuqun = outfit.accessories.some(a => a.id === 'acc-foreign-ruqun-ribbon');
 
   return (
     <div
-      className={`relative w-full rounded-2xl bg-gradient-to-b from-obsidian-900 to-[#0A0B0E] border border-white/10 flex flex-col items-center justify-between p-3 sm:p-5 overflow-hidden shadow-2xl transition-all ${
-        isTaNham ? 'border-rose-500/50 shadow-rose-950/40' : ''
+      className={`relative w-full rounded-2xl bg-gradient-to-b from-[#FCFBF8] via-[#F8F6F0] to-[#EFECE2] border flex flex-col items-center justify-between p-3 sm:p-5 overflow-hidden shadow-xs transition-all ${
+        isTaNham ? 'border-amber-400 ring-2 ring-amber-400/20' : 'border-stone-200'
       }`}
     >
-      {/* Canvas Header / Mode Bar */}
-      <div className="w-full flex items-center justify-between border-b border-white/10 pb-2.5 mb-2 z-20 text-xs font-mono">
-        {/* Model Gender Switcher */}
-        <div className="flex items-center gap-1 bg-obsidian-800 p-0.5 rounded-lg border border-white/10">
+      {/* ===================================================================== */}
+      {/* CANVAS HEADER: CHARACTER ARCHETYPES & ATELIER TOOLS                   */}
+      {/* ===================================================================== */}
+      <div className="w-full flex flex-wrap items-center justify-between gap-2 border-b border-stone-200/80 pb-2.5 mb-2 z-20 text-xs font-mono">
+        
+        {/* Character Archetypes / Atelier Mode */}
+        <div className="flex items-center gap-1 bg-stone-100 p-0.5 rounded-lg border border-stone-200">
           <button
-            onClick={() => setModelGender('FEMALE')}
-            className={`px-2.5 py-1 rounded text-[11px] transition-colors font-medium cursor-pointer ${
-              modelGender === 'FEMALE'
-                ? 'bg-heritage-hoang text-black font-bold shadow'
-                : 'text-neutral-400 hover:text-white'
+            onClick={() => {
+              setDisplayMode('FIGURE');
+              setModelGender('FEMALE');
+              setAvatarRole('STUDENT');
+            }}
+            className={`px-2 py-1 rounded text-[11px] transition-colors font-medium cursor-pointer ${
+              displayMode === 'FIGURE' && modelGender === 'FEMALE' && avatarRole === 'STUDENT'
+                ? 'bg-amber-600 text-white font-bold shadow-xs'
+                : 'text-stone-600 hover:text-stone-900'
             }`}
+            title="Nữ Sinh Đoan Trang"
           >
-            Nữ Nhân
+            👩 Nữ Sinh
           </button>
+
           <button
-            onClick={() => setModelGender('MALE')}
-            className={`px-2.5 py-1 rounded text-[11px] transition-colors font-medium cursor-pointer ${
-              modelGender === 'MALE'
-                ? 'bg-heritage-hoang text-black font-bold shadow'
-                : 'text-neutral-400 hover:text-white'
+            onClick={() => {
+              setDisplayMode('FIGURE');
+              setModelGender('FEMALE');
+              setAvatarRole('ROYAL');
+            }}
+            className={`px-2 py-1 rounded text-[11px] transition-colors font-medium cursor-pointer ${
+              displayMode === 'FIGURE' && modelGender === 'FEMALE' && avatarRole === 'ROYAL'
+                ? 'bg-amber-600 text-white font-bold shadow-xs'
+                : 'text-stone-600 hover:text-stone-900'
             }`}
+            title="Nữ Quý Tộc Cung Đình"
           >
-            Nam Nhân
+            👸 Quý Tộc
+          </button>
+
+          <button
+            onClick={() => {
+              setDisplayMode('FIGURE');
+              setModelGender('MALE');
+              setAvatarRole('STUDENT');
+            }}
+            className={`px-2 py-1 rounded text-[11px] transition-colors font-medium cursor-pointer ${
+              displayMode === 'FIGURE' && modelGender === 'MALE' && avatarRole === 'STUDENT'
+                ? 'bg-amber-600 text-white font-bold shadow-xs'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+            title="Nam Nho Sinh / Sĩ Tử"
+          >
+            👨 Nho Sinh
+          </button>
+
+          <button
+            onClick={() => {
+              setDisplayMode('FIGURE');
+              setModelGender('MALE');
+              setAvatarRole('ROYAL');
+            }}
+            className={`px-2 py-1 rounded text-[11px] transition-colors font-medium cursor-pointer ${
+              displayMode === 'FIGURE' && modelGender === 'MALE' && avatarRole === 'ROYAL'
+                ? 'bg-amber-600 text-white font-bold shadow-xs'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+            title="Nam Quan Viên Triều Đình"
+          >
+            🤴 Quan Viên
+          </button>
+
+          <button
+            onClick={() => setDisplayMode(displayMode === 'DRESS_FORM' ? 'FIGURE' : 'DRESS_FORM')}
+            className={`px-2 py-1 rounded text-[11px] transition-colors font-medium cursor-pointer ${
+              displayMode === 'DRESS_FORM'
+                ? 'bg-stone-800 text-white font-bold shadow-xs'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+            title="Chuyển chế độ Ma-nơ-canh Cốt Gỗ Công Xưởng (Atelier Dress Form)"
+          >
+            🪡 Cốt Gỗ
           </button>
         </div>
 
-        {/* Canvas Quick Actions: X-Ray & Zoom */}
-        <div className="flex items-center gap-2">
+        {/* Quick Tools: Face Try-On, X-Ray Structure, Zoom */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <button
+            onClick={startCamera}
+            className={`px-2.5 py-1 rounded-md border flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] ${
+              outfit.customAvatarUrl
+                ? 'bg-amber-50 border-amber-300 text-amber-900 font-semibold'
+                : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50 shadow-xs'
+            }`}
+            title="Thử mặt chân dung qua Camera hoặc tải ảnh"
+          >
+            <Camera className="w-3.5 h-3.5 text-amber-700" />
+            <span>{outfit.customAvatarUrl ? 'Mặt Cá Nhân' : 'Thử Mặt'}</span>
+          </button>
+
+          {outfit.customAvatarUrl && (
+            <button
+              onClick={handleResetFace}
+              className="p-1 rounded bg-stone-100 border border-stone-200 text-stone-600 hover:text-stone-900 text-[10px] cursor-pointer"
+              title="Gỡ ảnh thử mặt"
+            >
+              Gỡ
+            </button>
+          )}
+
           <button
             onClick={() => onUpdateOutfit(prev => ({ ...prev, isXRayMode: !prev.isXRayMode }))}
             className={`px-2.5 py-1 rounded-md border flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] ${
               isXRay
-                ? 'bg-teal-950 border-teal-400 text-teal-200'
-                : 'bg-white/5 border-white/10 text-neutral-300 hover:text-white'
+                ? 'bg-teal-50 border-teal-300 text-teal-900 font-semibold'
+                : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50 shadow-xs'
             }`}
-            title="Soi chiếu cấu trúc đường may và sống lưng Chính Trung"
+            title="Chế độ soi chiếu cấu trúc đường may Chính Trung & các lớp phục sức"
           >
-            {isXRay ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span>{isXRay ? 'X-Ray: Bật' : 'X-Ray'}</span>
+            {isXRay ? <Eye className="w-3.5 h-3.5 text-teal-700" /> : <EyeOff className="w-3.5 h-3.5" />}
+            <span>X-Ray</span>
           </button>
 
           <button
             onClick={() => setZoomLevel(prev => (prev === 1 ? 1.25 : 1))}
-            className="p-1.5 rounded-md bg-white/5 border border-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-            title="Phóng to chi tiết ngực, cổ và nẹp cúc"
+            className="p-1.5 rounded-md bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 transition-colors cursor-pointer shadow-xs"
+            title="Phóng to chi tiết ngực, cổ áo và nẹp cúc"
           >
             {zoomLevel === 1 ? <ZoomIn className="w-3.5 h-3.5" /> : <ZoomOut className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      {/* Main 2D Fashion Mannequin Interactive Stage */}
-      <div className="relative w-full h-[420px] sm:h-[470px] flex items-center justify-center overflow-hidden">
+      {/* ===================================================================== */}
+      {/* MAIN 2D ATELIER STAGE (SEAMLESS VECTOR MANNEQUIN)                      */}
+      {/* ===================================================================== */}
+      <div className="relative w-full h-[430px] sm:h-[480px] flex items-center justify-center overflow-hidden">
         
-        {/* Ambient Halo Glow */}
+        {/* Ambient Radial Spotlight */}
         <div
           className={`absolute inset-0 transition-colors duration-700 pointer-events-none opacity-40 ${
             isTaNham
-              ? 'bg-[radial-gradient(ellipse_at_center,rgba(159,18,57,0.5)_0%,transparent_70%)]'
+              ? 'bg-[radial-gradient(ellipse_at_center,rgba(217,119,6,0.18)_0%,transparent_70%)]'
               : isXRay
-              ? 'bg-[radial-gradient(ellipse_at_center,rgba(13,148,136,0.4)_0%,transparent_70%)]'
-              : 'bg-[radial-gradient(ellipse_at_center,rgba(214,158,46,0.25)_0%,transparent_70%)]'
+              ? 'bg-[radial-gradient(ellipse_at_center,rgba(13,148,136,0.15)_0%,transparent_70%)]'
+              : 'bg-[radial-gradient(ellipse_at_center,rgba(214,158,46,0.14)_0%,transparent_70%)]'
           }`}
         />
 
-        {/* Taboo 01 Alert Watermark Banner */}
+        {/* Taboo Alert Watermark Banner */}
         {isTaNham && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1 rounded-full bg-rose-600/95 text-white font-mono text-[11px] font-bold shadow-rule-error flex items-center gap-1.5 animate-bounce">
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1 rounded-full bg-amber-800 text-white font-mono text-[11px] font-semibold shadow-md flex items-center gap-1.5 whitespace-nowrap">
             <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-            <span>ĐẠI KỴ: TẢ NHẬM (CHỈ DÙNG KHÂM LIỆM NGƯỜI KHUẤT)</span>
+            <span>LƯU Ý: VẠT ÁO NGƯỜI SỐNG KHÉP SANG PHẢI (HỮU NHẬM)</span>
           </div>
         )}
 
         {/* Foreign Assimilation Alert Banner */}
         {(hasForeignObi || hasForeignRuqun) && (
-          <div className="absolute top-10 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1 rounded-full bg-amber-600/95 text-white font-mono text-[11px] font-bold shadow-lg flex items-center gap-1.5 animate-pulse">
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1 rounded-full bg-rose-700 text-white font-mono text-[11px] font-semibold shadow-md flex items-center gap-1.5 whitespace-nowrap">
             <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-            <span>CẢNH BÁO: PHỤ KIỆN LAI CĂNG ĐỒNG HÓA VĂN HÓA</span>
+            <span>LƯU Ý: PHỤ KIỆN LAI CĂNG NGOẠI LAI CẦN THAY THẾ</span>
           </div>
         )}
 
         {/* =================================================================== */}
-        {/* 2D FASHION MANNEQUIN SVG MODEL WITH DYNAMIC GARMENT DRAPING         */}
+        {/* RE-ENGINEERED VECTOR MANNEQUIN & GARMENTS                           */}
         {/* =================================================================== */}
         <div
-          className="relative transition-transform duration-300 ease-out origin-center"
+          className="relative transition-transform duration-300 ease-out origin-center select-none"
           style={{ transform: `scale(${zoomLevel})` }}
         >
           <svg
             viewBox="0 0 320 540"
-            className="w-[280px] sm:w-[320px] h-[410px] sm:h-[460px] drop-shadow-2xl select-none"
+            className="w-[290px] sm:w-[330px] h-[420px] sm:h-[475px] drop-shadow-xl select-none"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
             <defs>
-              {/* Mannequin Skin Gradients */}
+              {/* Skin Tone Gradient */}
               <linearGradient id="skinTone" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#F7EFE9" />
-                <stop offset="60%" stopColor="#ECD9C8" />
-                <stop offset="100%" stopColor="#DCBEA8" />
+                {skinToneType === 'HONEY' ? (
+                  <>
+                    <stop offset="0%" stopColor="#DFC3A7" />
+                    <stop offset="60%" stopColor="#C9A280" />
+                    <stop offset="100%" stopColor="#B38664" />
+                  </>
+                ) : skinToneType === 'ROSE' ? (
+                  <>
+                    <stop offset="0%" stopColor="#FFF2EE" />
+                    <stop offset="60%" stopColor="#F9DDD6" />
+                    <stop offset="100%" stopColor="#ECC4BC" />
+                  </>
+                ) : (
+                  <>
+                    <stop offset="0%" stopColor="#FAF2EB" />
+                    <stop offset="60%" stopColor="#EEDCCE" />
+                    <stop offset="100%" stopColor="#DEC2AF" />
+                  </>
+                )}
               </linearGradient>
 
-              {/* Silk Core Fabric Gradient */}
+              {/* Atelier Fabric Dress Form Texture */}
+              <linearGradient id="dressFormFabric" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#F5EFE6" />
+                <stop offset="50%" stopColor="#E8DEC8" />
+                <stop offset="100%" stopColor="#D5C5A8" />
+              </linearGradient>
+
+              {/* Atelier Stand Metallic Brass */}
+              <linearGradient id="brassMetal" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#D4AF37" />
+                <stop offset="50%" stopColor="#F6E08B" />
+                <stop offset="100%" stopColor="#AA820A" />
+              </linearGradient>
+
+              {/* Core Silk Fabric Gradient */}
               <linearGradient id="coreFabric" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor={activeColor} />
                 <stop offset="100%" stopColor="#0B132B" stopOpacity="0.88" />
@@ -198,146 +393,223 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                 <stop offset="100%" stopColor="#B45309" />
               </linearGradient>
 
-              {/* Cyber Organza Sheer Gradient */}
+              {/* Cyber Organza Gradient */}
               <linearGradient id="organzaSheer" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#CCFF00" stopOpacity="0.32" />
-                <stop offset="100%" stopColor="#00F5D4" stopOpacity="0.18" />
+                <stop offset="0%" stopColor="#CCFF00" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#00F5D4" stopOpacity="0.2" />
               </linearGradient>
 
-              {/* Soft Drop Shadow Filter for Garment Folds */}
+              {/* Clip path for user camera avatar face */}
+              <clipPath id="avatarUserFaceClip">
+                <ellipse cx="160" cy="62" rx="14" ry="16" />
+              </clipPath>
+
+              {/* Soft Drop Shadow Filter */}
               <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.4" />
+                <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.3" />
               </filter>
             </defs>
 
             {/* =============================================================== */}
-            {/* 1. LAYER 0: HAUTE COUTURE 2D FASHION MANNEQUIN FIGURE           */}
+            {/* 1. ATELIER PEDESTAL & SHADOW BASE                               */}
             {/* =============================================================== */}
-            <g id="mannequin-anatomy">
-              {/* Obsidian pedestal shadow */}
-              <ellipse cx="160" cy="516" rx="68" ry="11" fill="#000000" opacity="0.6" />
-              <ellipse cx="160" cy="516" rx="45" ry="6" fill="#000000" opacity="0.8" />
+            <g id="atelier-pedestal">
+              {/* Studio floor shadow */}
+              <ellipse cx="160" cy="516" rx="72" ry="12" fill="#C5BFB0" opacity="0.4" />
+              <ellipse cx="160" cy="516" rx="48" ry="7" fill="#A8A190" opacity="0.5" />
 
-              {/* Hair / Head Coiffure */}
-              {modelGender === 'FEMALE' ? (
-                <g id="female-hair">
-                  {/* Traditional High Bun (Búi tóc củ hành đoan trang) */}
-                  <circle cx="160" cy="46" r="15" fill="#1C1917" />
-                  <ellipse cx="160" cy="60" rx="19" ry="22" fill="#1C1917" />
-                  {/* Jade Hairpin (Trâm ngọc cài tóc) */}
-                  <line x1="172" y1="42" x2="190" y2="34" stroke="#00F5D4" strokeWidth="2" strokeLinecap="round" />
-                  <circle cx="191" cy="34" r="2.5" fill="#FDE68A" />
-                </g>
-              ) : (
-                <g id="male-hair">
-                  {/* Male Topknot / Coiffure */}
-                  <ellipse cx="160" cy="50" rx="12" ry="10" fill="#1C1917" />
-                  <path d="M142 56 Q160 44 178 56 L178 68 Q160 74 142 68 Z" fill="#1C1917" />
+              {/* Atelier Brass Stand Base (If Dress Form Mode) */}
+              {displayMode === 'DRESS_FORM' && (
+                <g id="stand-pole">
+                  {/* Brass circular base plate */}
+                  <ellipse cx="160" cy="514" rx="42" ry="6" fill="url(#brassMetal)" stroke="#B45309" strokeWidth="0.8" />
+                  <ellipse cx="160" cy="512" rx="36" ry="5" fill="#FAF5E4" opacity="0.6" />
+                  {/* Center Brass Pole */}
+                  <rect x="157" y="270" width="6" height="242" rx="2" fill="url(#brassMetal)" stroke="#92400E" strokeWidth="0.6" />
+                  <circle cx="160" cy="460" r="5" fill="url(#brassMetal)" />
                 </g>
               )}
-
-              {/* Graceful Face Silhouette */}
-              <path
-                d="M148 64 C148 78, 172 78, 172 64 C172 54, 148 54, 148 64 Z"
-                fill="url(#skinTone)"
-                stroke="#D6C4B2"
-                strokeWidth="0.8"
-              />
-              {/* Subtle Elegant Facial Features */}
-              <path d="M153 66 Q156 68 155 70" stroke="#C4A892" strokeWidth="0.8" fill="none" />
-              <path d="M157 74 Q160 75 163 74" stroke="#BE185D" strokeWidth="1" strokeLinecap="round" />
-
-              {/* Slender Graceful Neck (Cổ cao 3 ngấn) */}
-              <path
-                d="M153 76 L153 104 L167 104 L167 76 Z"
-                fill="url(#skinTone)"
-              />
-              {/* Throat & Clavicle (Xương quai xanh) Lines */}
-              <path
-                d="M146 104 Q160 110 174 104"
-                stroke="#CBB5A1"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-
-              {/* Torso & Shoulder Anatomy (Mannequin body) */}
-              <path
-                d="M110 118 Q160 104 210 118 L200 232 Q160 238 120 232 Z"
-                fill="url(#skinTone)"
-                stroke="#D6C4B2"
-                strokeWidth="0.8"
-              />
-
-              {/* Graceful Arms (Dáng đứng khoan thai) */}
-              {/* Left Arm */}
-              <path
-                d="M110 118 Q92 172 96 252 L104 252 Q104 176 118 126 Z"
-                fill="url(#skinTone)"
-              />
-              {/* Left Hand Fingers */}
-              <path d="M96 252 Q94 260 97 264 Q100 260 104 252 Z" fill="url(#skinTone)" />
-
-              {/* Right Arm */}
-              <path
-                d="M210 118 Q228 172 224 252 L216 252 Q216 176 202 126 Z"
-                fill="url(#skinTone)"
-              />
-              {/* Right Hand Fingers */}
-              <path d="M216 252 Q220 260 223 264 Q226 260 224 252 Z" fill="url(#skinTone)" />
-
-              {/* Slender Long Legs & Feet (Chân dài chuẩn thời trang) */}
-              <path d="M136 232 L138 482 L152 482 L156 232 Z" fill="url(#skinTone)" opacity="0.95" />
-              <path d="M164 232 L168 482 L182 482 L184 232 Z" fill="url(#skinTone)" opacity="0.95" />
-              {/* Feet */}
-              <ellipse cx="145" cy="486" rx="8" ry="4" fill="url(#skinTone)" />
-              <ellipse cx="175" cy="486" rx="8" ry="4" fill="url(#skinTone)" />
             </g>
 
             {/* =============================================================== */}
-            {/* 2. LAYER 1: BASE / NỘI Y (YẾM ĐÀO HOẶC TRUNG ĐƠN)              */}
+            {/* 2. BASE ANATOMY / BODY SILHOUETTE (NO SLEEVE CLIPPING!)          */}
+            {/* =============================================================== */}
+            <g id="body-anatomy">
+              
+              {/* A. DRESS FORM MODE (Atelier Linen Tailor's Dummy) */}
+              {displayMode === 'DRESS_FORM' ? (
+                <g id="dress-form-body">
+                  {/* Wooden Neck Cap & Finial */}
+                  <ellipse cx="160" cy="80" rx="12" ry="4" fill="url(#brassMetal)" />
+                  <circle cx="160" cy="74" r="5" fill="url(#brassMetal)" />
+                  <path d="M157 74 L157 80 L163 80 L163 74 Z" fill="url(#brassMetal)" />
+
+                  {/* Tailored Linen Torso Form */}
+                  <path
+                    d="M148 84 L172 84 L204 118 L192 188 Q160 196 128 188 L116 118 Z"
+                    fill="url(#dressFormFabric)"
+                    stroke="#B8A78A"
+                    strokeWidth="1"
+                  />
+                  {/* Lower hips of dress form */}
+                  <path
+                    d="M128 188 Q160 196 192 188 L196 268 Q160 274 124 268 Z"
+                    fill="url(#dressFormFabric)"
+                    stroke="#B8A78A"
+                    strokeWidth="1"
+                  />
+                  {/* Atelier Princess Seams (Đường may mẫu định hình) */}
+                  <path d="M148 84 Q142 140 144 268" stroke="#A89475" strokeWidth="0.8" strokeDasharray="3 2" fill="none" />
+                  <path d="M172 84 Q178 140 176 268" stroke="#A89475" strokeWidth="0.8" strokeDasharray="3 2" fill="none" />
+                  <line x1="160" y1="84" x2="160" y2="270" stroke="#8C795C" strokeWidth="1" />
+                </g>
+              ) : (
+                /* B. HUMAN CROQUIS MODE (Graceful Vietnamese Fashion Model) */
+                <g id="human-croquis">
+                  {/* Hair / Head Coiffure */}
+                  {modelGender === 'FEMALE' ? (
+                    <g id="female-hair">
+                      <circle cx="160" cy="45" r="15" fill="#1C1917" />
+                      <ellipse cx="160" cy="58" rx="19" ry="21" fill="#1C1917" />
+                      {avatarRole === 'ROYAL' ? (
+                        <>
+                          <circle cx="160" cy="40" r="5" fill="#F59E0B" stroke="#D97706" strokeWidth="0.8" />
+                          <line x1="172" y1="40" x2="194" y2="30" stroke="#00F5D4" strokeWidth="2.5" strokeLinecap="round" />
+                          <circle cx="195" cy="30" r="3" fill="#FDE68A" />
+                          <line x1="148" y1="40" x2="126" y2="30" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" />
+                          <circle cx="125" cy="30" r="3" fill="#FDE68A" />
+                        </>
+                      ) : (
+                        <>
+                          <line x1="172" y1="42" x2="190" y2="34" stroke="#00F5D4" strokeWidth="2" strokeLinecap="round" />
+                          <circle cx="191" cy="34" r="2.5" fill="#FDE68A" />
+                        </>
+                      )}
+                    </g>
+                  ) : (
+                    <g id="male-hair">
+                      <ellipse cx="160" cy="48" rx="12" ry="10" fill="#1C1917" />
+                      <path d="M142 54 Q160 42 178 54 L178 66 Q160 72 142 66 Z" fill="#1C1917" />
+                      {avatarRole === 'ROYAL' && (
+                        <>
+                          <line x1="148" y1="46" x2="172" y2="46" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" />
+                          <circle cx="173" cy="46" r="2.5" fill="#00F5D4" />
+                        </>
+                      )}
+                    </g>
+                  )}
+
+                  {/* Face: User Camera Selfie or Elegant Vector Silhouette */}
+                  {outfit.customAvatarUrl ? (
+                    <g id="user-camera-face">
+                      <ellipse cx="160" cy="62" rx="14" ry="16" fill="url(#skinTone)" />
+                      <image
+                        href={outfit.customAvatarUrl}
+                        x="146"
+                        y="46"
+                        width="28"
+                        height="32"
+                        preserveAspectRatio="xMidYMid slice"
+                        clipPath="url(#avatarUserFaceClip)"
+                      />
+                      <ellipse cx="160" cy="62" rx="14" ry="16" fill="none" stroke="#D4AF37" strokeWidth="1" />
+                    </g>
+                  ) : (
+                    <g id="croquis-face">
+                      <ellipse cx="160" cy="62" rx="14" ry="16" fill="url(#skinTone)" stroke="#D6C4B2" strokeWidth="0.8" />
+                      {/* Gentle Facial Details */}
+                      <path d="M154 62 Q156 64 155 66" stroke="#C4A892" strokeWidth="0.8" fill="none" />
+                      <path d="M157 70 Q160 71 163 70" stroke="#BE185D" strokeWidth="1" strokeLinecap="round" />
+                    </g>
+                  )}
+
+                  {/* Slender Neck (Cổ cao ba ngấn) */}
+                  <path d="M153 76 L153 98 L167 98 L167 76 Z" fill="url(#skinTone)" />
+                  <path d="M146 98 Q160 104 174 98" stroke="#CBB5A1" strokeWidth="1.2" strokeLinecap="round" />
+
+                  {/* Graceful Shoulders & Torso */}
+                  <path
+                    d="M108 114 Q160 102 212 114 L200 230 Q160 238 120 230 Z"
+                    fill="url(#skinTone)"
+                    stroke="#D6C4B2"
+                    strokeWidth="0.8"
+                  />
+
+                  {/* Legs & Feet (Chân dài chuẩn thời trang) */}
+                  <path d="M136 230 L138 480 L152 480 L156 230 Z" fill="url(#skinTone)" opacity="0.95" />
+                  <path d="M164 230 L168 480 L182 480 L184 230 Z" fill="url(#skinTone)" opacity="0.95" />
+                  <ellipse cx="145" cy="484" rx="8" ry="4" fill="url(#skinTone)" />
+                  <ellipse cx="175" cy="484" rx="8" ry="4" fill="url(#skinTone)" />
+
+                  {/* BARE ARMS: ONLY RENDERED WHEN NO CORE ROBE IS ACTIVE (ELIMINATING ARM CLIPPING!) */}
+                  {!hasFullSleeves && (
+                    <g id="bare-arms">
+                      {/* Left Bare Arm */}
+                      <path
+                        d="M108 114 Q90 170 94 246 L104 246 Q106 174 120 126 Z"
+                        fill="url(#skinTone)"
+                        stroke="#D6C4B2"
+                        strokeWidth="0.8"
+                      />
+                      <path d="M94 246 Q92 254 96 258 Q100 254 104 246 Z" fill="url(#skinTone)" />
+
+                      {/* Right Bare Arm */}
+                      <path
+                        d="M212 114 Q230 170 226 246 L216 246 Q214 174 200 126 Z"
+                        fill="url(#skinTone)"
+                        stroke="#D6C4B2"
+                        strokeWidth="0.8"
+                      />
+                      <path d="M216 246 Q220 254 224 258 Q228 254 226 246 Z" fill="url(#skinTone)" />
+                    </g>
+                  )}
+                </g>
+              )}
+            </g>
+
+            {/* =============================================================== */}
+            {/* 3. LAYER 1: BASE LAYER / NỘI Y (YẾM ĐÀO HOẶC TRUNG ĐƠN)        */}
             {/* =============================================================== */}
             {visibleLayers.base && outfit.baseGarment && (
               <g id="layer-base">
                 {outfit.baseGarment.id === 'base-yem-canh-sen' || outfit.baseGarment.id.includes('yem') ? (
-                  // Yếm Đào Cổ Cánh Sen (Lụa cánh sen thắt yếm)
+                  /* Yếm Đào Cổ Cánh Sen */
                   <g filter="url(#softGlow)">
-                    {/* Halter neck cord tying behind neck */}
-                    <path d="M152 88 Q160 102 168 88" stroke="#D69E2E" strokeWidth="1.6" fill="none" />
-                    {/* Yếm Bodice: Vát chéo duyên dáng che ngực */}
+                    <path d="M152 86 Q160 100 168 86" stroke="#D69E2E" strokeWidth="1.6" fill="none" />
                     <path
-                      d="M142 110 Q160 116 178 110 L190 176 Q160 188 130 176 Z"
+                      d="M142 108 Q160 114 178 108 L188 174 Q160 186 132 174 Z"
                       fill="#C53030"
                       stroke="#FDA4AF"
                       strokeWidth="1.2"
                     />
-                    {/* Embroidered Golden Lotus flower center */}
-                    <circle cx="160" cy="144" r="5" fill="#FDE68A" />
-                    <path d="M155 144 Q160 137 165 144" stroke="#B45309" strokeWidth="1" fill="none" />
-                    <path d="M153 148 Q160 154 167 148" stroke="#B45309" strokeWidth="1" fill="none" />
+                    {/* Golden Lotus center embroidery */}
+                    <circle cx="160" cy="140" r="5" fill="#FDE68A" />
+                    <path d="M155 140 Q160 133 165 140" stroke="#B45309" strokeWidth="1" fill="none" />
+                    <path d="M153 144 Q160 150 167 144" stroke="#B45309" strokeWidth="1" fill="none" />
                   </g>
                 ) : (
-                  // Trung Đơn Bạch (Áo lót trắng lập lĩnh ôm khít cổ)
+                  /* Trung Đơn Lụa Bạch (Áo Lót Trắng Lập Lĩnh) */
                   <g>
                     <path
-                      d="M140 98 L180 98 L190 190 L130 190 Z"
+                      d="M140 96 L180 96 L190 190 L130 190 Z"
                       fill="#FFFFFF"
                       stroke="#E5E7EB"
                       strokeWidth="1"
                     />
-                    {/* Crisp white inner collar rim (Diềm trắng lập lĩnh) */}
-                    <rect x="145" y="91" width="30" height="10" rx="2" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1.2" />
+                    {/* Diềm trắng lập lĩnh ôm khít 1.5mm */}
+                    <rect x="145" y="90" width="30" height="9" rx="2" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1.2" />
                   </g>
                 )}
               </g>
             )}
 
             {/* =============================================================== */}
-            {/* 3. LAYER 2: BOTTOM PIECE / HẠ Y (QUẦN LỤA / VÁY ĐỤP / CARGO)    */}
+            {/* 4. LAYER 2: BOTTOM PIECE / HẠ Y (QUẦN LỤA / VÁY ĐỤP / CARGO)    */}
             {/* =============================================================== */}
             {visibleLayers.bottom && outfit.bottomPiece && (
               <g id="layer-bottom" filter="url(#softGlow)">
                 {outfit.bottomPiece.id === 'bottom-vay-dup-den' ? (
-                  // Váy đụp đen xòe Kinh Bắc
+                  /* Váy Đụp Đen Kinh Bắc */
                   <g>
                     <path
                       d="M132 216 L188 216 L220 442 Q160 458 100 442 Z"
@@ -345,12 +617,11 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       stroke="#27272A"
                       strokeWidth="1.5"
                     />
-                    {/* Soft folds of rustic fabric */}
                     <path d="M145 220 Q142 330 135 444" stroke="#27272A" strokeWidth="1.2" fill="none" />
                     <path d="M175 220 Q178 330 185 444" stroke="#27272A" strokeWidth="1.2" fill="none" />
                   </g>
                 ) : outfit.bottomPiece.id === 'bottom-parachute-cargo' ? (
-                  // Quần Cargo Techwear rộng ống Gen Z
+                  /* Quần Cargo Techwear Gen Z */
                   <g>
                     <path
                       d="M130 216 L190 216 L210 476 L168 476 L160 280 L152 476 L110 476 Z"
@@ -358,14 +629,13 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       stroke="#334155"
                       strokeWidth="1.5"
                     />
-                    {/* Neon Straps & Cargo pockets */}
                     <line x1="118" y1="312" x2="148" y2="312" stroke="#CCFF00" strokeWidth="2" strokeDasharray="3 3" />
                     <line x1="172" y1="312" x2="202" y2="312" stroke="#CCFF00" strokeWidth="2" strokeDasharray="3 3" />
                     <rect x="120" y="322" width="22" height="26" rx="2" fill="#0F172A" stroke="#334155" />
                     <rect x="178" y="322" width="22" height="26" rx="2" fill="#0F172A" stroke="#334155" />
                   </g>
                 ) : (
-                  // Quần lụa trắng / Quần lụa đen ống suông rủ tha thướt
+                  /* Quần Lụa Trắng / Quần Lụa Đen Ống Suông */
                   <g>
                     <path
                       d="M134 216 L186 216 L202 478 L168 478 L160 262 L152 478 L118 478 Z"
@@ -374,7 +644,6 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       strokeWidth="0.8"
                       opacity={isXRay ? 0.35 : 1}
                     />
-                    {/* Natural silk drapery lines */}
                     <path d="M142 240 Q138 360 134 478" stroke={outfit.bottomPiece.defaultColor?.hex === '#F8FAFC' ? '#E2E8F0' : '#27272A'} strokeWidth="1" fill="none" />
                     <path d="M178 240 Q182 360 186 478" stroke={outfit.bottomPiece.defaultColor?.hex === '#F8FAFC' ? '#E2E8F0' : '#27272A'} strokeWidth="1" fill="none" />
                   </g>
@@ -383,63 +652,88 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
             )}
 
             {/* =============================================================== */}
-            {/* 4. LAYER 3: CORE ROBE / THÂN ÁO CHÍNH (ĐẮP LÊN NGƯỜI)           */}
+            {/* 5. LAYER 3: CORE ROBES & SEAMLESS SLEEVES (ZERO CLIPPING!)       */}
             {/* =============================================================== */}
             {visibleLayers.core && (
               <g id="layer-core" opacity={isXRay ? 0.45 : 1} filter="url(#softGlow)">
                 
-                {/* --- A. ÁO NHẬT BÌNH CUNG ĐÌNH TRIỀU NGUYỄN --- */}
+                {/* ------------------------------------------------------------- */}
+                {/* A. ÁO NHẬT BÌNH HOÀNG CUNG HUẾ                                */}
+                {/* ------------------------------------------------------------- */}
                 {coreId === 'core-nhat-binh' || coreCat === 'NHAT_BINH' ? (
-                  <g id="ao-nhat-binh">
+                  <g id="robe-nhat-binh">
                     {/* Main Imperial Crimson Robe Body */}
                     <path
-                      d="M108 114 L212 114 L228 434 Q160 446 92 434 Z"
+                      d="M108 114 L212 114 L228 436 Q160 448 92 436 Z"
                       fill="url(#coreFabric)"
                       stroke="#D69E2E"
                       strokeWidth="1.5"
                     />
-                    {/* Wide Rectangular Embroidered Collar (Cổ Vuông Nhật Bình) */}
+
+                    {/* SEAMLESS COURTLY SLEEVES WITH FIVE-ELEMENT CUFF BANDS */}
+                    {/* Left Drooping Sleeve (Thụng Cung Đình) */}
+                    <path
+                      d="M108 114 Q78 190 62 272 L102 280 Q122 196 126 150 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1.2"
+                    />
+                    {/* 5-Element Wrist Bands on Left Cuff */}
+                    <rect x="63" y="266" width="38" height="3" fill="#1E3A8A" transform="rotate(11, 63, 266)" />
+                    <rect x="65" y="269" width="38" height="3" fill="#D69E2E" transform="rotate(11, 65, 269)" />
+                    <rect x="67" y="272" width="38" height="3" fill="#FFFFFF" transform="rotate(11, 67, 272)" />
+                    <rect x="69" y="275" width="38" height="3" fill="#C53030" transform="rotate(11, 69, 275)" />
+                    <rect x="71" y="278" width="38" height="3" fill="#0E0F12" transform="rotate(11, 71, 278)" />
+
+                    {/* Right Drooping Sleeve (Thụng Cung Đình) */}
+                    <path
+                      d="M212 114 Q242 190 258 272 L218 280 Q198 196 194 150 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1.2"
+                    />
+                    {/* 5-Element Wrist Bands on Right Cuff */}
+                    <rect x="220" y="278" width="38" height="3" fill="#0E0F12" transform="rotate(-11, 220, 278)" />
+                    <rect x="218" y="275" width="38" height="3" fill="#C53030" transform="rotate(-11, 218, 275)" />
+                    <rect x="216" y="272" width="38" height="3" fill="#FFFFFF" transform="rotate(-11, 216, 272)" />
+                    <rect x="214" y="269" width="38" height="3" fill="#D69E2E" transform="rotate(-11, 214, 269)" />
+                    <rect x="212" y="266" width="38" height="3" fill="#1E3A8A" transform="rotate(-11, 212, 266)" />
+
+                    {/* Graceful Courtly Hands emerging cleanly at cuffs */}
+                    {displayMode === 'FIGURE' && (
+                      <g id="nhat-binh-hands">
+                        {/* Left Hand */}
+                        <path d="M84 278 Q88 296 94 298 Q98 294 96 280 Z" fill="url(#skinTone)" stroke="#CBB5A1" strokeWidth="0.6" />
+                        {/* Right Hand */}
+                        <path d="M224 280 Q222 294 226 298 Q232 296 236 278 Z" fill="url(#skinTone)" stroke="#CBB5A1" strokeWidth="0.6" />
+                      </g>
+                    )}
+
+                    {/* Wide Rectangular Embroidered Collar (Cổ Vuông Chữ Nhật) */}
                     <rect
                       x="140"
-                      y="100"
+                      y="98"
                       width="40"
-                      height="174"
+                      height="176"
                       rx="3"
                       fill="#831843"
                       stroke="url(#goldSeam)"
                       strokeWidth="2.5"
                     />
-                    {/* Phoenix & Cloud motifs on collar */}
-                    <circle cx="160" cy="130" r="4" fill="#FDE68A" />
-                    <circle cx="160" cy="180" r="4" fill="#FDE68A" />
-                    <circle cx="160" cy="230" r="4" fill="#FDE68A" />
+                    <circle cx="160" cy="128" r="4" fill="#FDE68A" />
+                    <circle cx="160" cy="178" r="4" fill="#FDE68A" />
+                    <circle cx="160" cy="228" r="4" fill="#FDE68A" />
 
-                    {/* Wide Drooping Sleeves with Five-Element Bands (Cửa tay viền ngũ sắc) */}
-                    {/* Left Sleeve */}
-                    <path d="M108 114 L64 252 L100 262 L124 160 Z" fill="url(#coreFabric)" />
-                    <rect x="64" y="248" width="36" height="3" fill="#1E3A8A" transform="rotate(12, 64, 248)" />
-                    <rect x="66" y="251" width="36" height="3" fill="#D69E2E" transform="rotate(12, 66, 251)" />
-                    <rect x="68" y="254" width="36" height="3" fill="#FFFFFF" transform="rotate(12, 68, 254)" />
-                    <rect x="70" y="257" width="36" height="3" fill="#C53030" transform="rotate(12, 70, 257)" />
-                    <rect x="72" y="260" width="36" height="3" fill="#0E0F12" transform="rotate(12, 72, 260)" />
-
-                    {/* Right Sleeve */}
-                    <path d="M212 114 L256 252 L220 262 L196 160 Z" fill="url(#coreFabric)" />
-                    <rect x="220" y="260" width="36" height="3" fill="#0E0F12" transform="rotate(-12, 220, 260)" />
-                    <rect x="218" y="257" width="36" height="3" fill="#C53030" transform="rotate(-12, 218, 257)" />
-                    <rect x="216" y="254" width="36" height="3" fill="#FFFFFF" transform="rotate(-12, 216, 254)" />
-                    <rect x="214" y="251" width="36" height="3" fill="#D69E2E" transform="rotate(-12, 214, 251)" />
-                    <rect x="212" y="248" width="36" height="3" fill="#1E3A8A" transform="rotate(-12, 212, 248)" />
-
-                    {/* Imperial Jade Tassels & Chest Cord (Dây thao đai ngọc thắt ngực) */}
+                    {/* Imperial Jade Tassels & Chest Cord (Đai ngọc thắt ngực) */}
                     <circle cx="160" cy="274" r="6" fill="#00F5D4" stroke="#FDE68A" strokeWidth="1.8" />
-                    <line x1="160" y1="280" x2="160" y2="348" stroke="#FDE68A" strokeWidth="2.2" />
-                    <circle cx="160" cy="350" r="3" fill="#FDE68A" />
+                    <line x1="160" y1="280" x2="160" y2="350" stroke="#FDE68A" strokeWidth="2.2" />
+                    <circle cx="160" cy="352" r="3" fill="#FDE68A" />
                   </g>
-
                 ) : coreId === 'core-ao-tac' || coreCat === 'AO_TAC' ? (
-                  // --- B. ÁO TẤC / TAY THỤ (ĐẠI LỄ TRIỀU NGUYỄN) ---
-                  <g id="ao-tac">
+                  /* ----------------------------------------------------------- */
+                  /* B. ÁO TẤC / TAY THỤ (ĐẠI LỄ TRIỀU NGUYỄN)                   */
+                  /* ----------------------------------------------------------- */
+                  <g id="robe-ao-tac">
                     {/* Robe Body flared wide past knees */}
                     <path
                       d="M110 114 L210 114 L232 444 Q160 456 88 444 Z"
@@ -447,7 +741,8 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       stroke="#D69E2E"
                       strokeWidth="1.5"
                     />
-                    {/* High Standing Collar Lập Lĩnh */}
+
+                    {/* Standing Collar Lập Lĩnh */}
                     <rect
                       x="145"
                       y="92"
@@ -458,26 +753,35 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       stroke={isTaNham ? '#EF4444' : '#FDE68A'}
                       strokeWidth="1.5"
                     />
-                    {/* MAGNIFICENT SQUARE DROOPING SLEEVES (Tay Thụng Vuông Vức 35-45cm) */}
+
+                    {/* MAGNIFICENT SQUARE DROOPING SLEEVES (Tay Thụng Rộng 35-45cm) */}
                     {/* Left Wide Drooping Sleeve */}
                     <path
-                      d="M110 114 L42 278 L98 288 L124 164 Z"
+                      d="M110 114 Q74 190 48 282 L112 290 Q124 196 126 150 Z"
                       fill="url(#coreFabric)"
                       stroke="#D69E2E"
-                      strokeWidth="1.2"
+                      strokeWidth="1.3"
                     />
                     {/* Right Wide Drooping Sleeve */}
                     <path
-                      d="M210 114 L278 278 L222 288 L196 164 Z"
+                      d="M210 114 Q246 190 272 282 L208 290 Q196 196 194 150 Z"
                       fill="url(#coreFabric)"
                       stroke="#D69E2E"
-                      strokeWidth="1.2"
+                      strokeWidth="1.3"
                     />
+
+                    {/* Hands folded reverently inside square cuffs (Chắp tay cung kính) */}
+                    {displayMode === 'FIGURE' && (
+                      <g id="ao-tac-hands">
+                        <path d="M102 284 Q106 298 112 300 Q116 296 114 286 Z" fill="url(#skinTone)" stroke="#CBB5A1" strokeWidth="0.6" />
+                        <path d="M206 286 Q204 296 208 300 Q214 298 218 284 Z" fill="url(#skinTone)" stroke="#CBB5A1" strokeWidth="0.6" />
+                      </g>
+                    )}
 
                     {/* Sống Lưng Chính Trung Seamline */}
                     <line x1="160" y1="104" x2="160" y2="446" stroke="url(#goldSeam)" strokeWidth="1.8" />
 
-                    {/* Lapel seam: Hữu Nhậm vs Tả Nhậm */}
+                    {/* Lapel Overlay: Hữu Nhậm vs Tả Nhậm */}
                     {isTaNham ? (
                       <path d="M175 104 Q150 142 126 154 L126 440" stroke="#EF4444" strokeWidth="2.5" fill="none" />
                     ) : (
@@ -505,17 +809,40 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       ))}
                     </g>
                   </g>
-
                 ) : coreId === 'core-giao-linh' || coreCat === 'GIAO_LINH' ? (
-                  // --- C. ÁO GIAO LĨNH CỔ CHÉO (ĐẠI VIỆT) ---
-                  <g id="ao-giao-linh">
+                  /* ----------------------------------------------------------- */
+                  /* C. ÁO GIAO LĨNH CỔ CHÉO (ĐẠI VIỆT TK 11 - 18)               */
+                  /* ----------------------------------------------------------- */
+                  <g id="robe-giao-linh">
                     <path
                       d="M108 114 L212 114 L228 438 Q160 450 92 438 Z"
                       fill="url(#coreFabric)"
                       stroke="#D69E2E"
                       strokeWidth="1.5"
                     />
-                    {/* Wide Crossed Y-Collar (Cổ chéo Hữu Nhậm: Trái đè Phải) */}
+
+                    {/* Broad sleeves */}
+                    <path
+                      d="M108 114 Q78 186 66 264 L104 272 Q122 196 126 150 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1.2"
+                    />
+                    <path
+                      d="M212 114 Q242 186 254 264 L216 272 Q198 196 194 150 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1.2"
+                    />
+
+                    {displayMode === 'FIGURE' && (
+                      <g id="giao-linh-hands">
+                        <path d="M92 270 Q94 286 100 288 Q104 284 102 272 Z" fill="url(#skinTone)" />
+                        <path d="M218 272 Q216 284 220 288 Q226 286 228 270 Z" fill="url(#skinTone)" />
+                      </g>
+                    )}
+
+                    {/* Crossed Y-Collar (Cổ chéo Hữu Nhậm: Trái đè Phải) */}
                     <path
                       d="M138 98 L182 174 L170 180 L126 104 Z"
                       fill="#D69E2E"
@@ -528,61 +855,94 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       stroke="#FDE68A"
                       strokeWidth="1.2"
                     />
-                    {/* Broad sleeves */}
-                    <path d="M108 114 L68 250 L102 260 L124 160 Z" fill="url(#coreFabric)" stroke="#D69E2E" />
-                    <path d="M212 114 L252 250 L218 260 L196 160 Z" fill="url(#coreFabric)" stroke="#D69E2E" />
                   </g>
-
                 ) : coreId === 'core-ao-dai-raglan' || coreCat === 'AO_DAI_RAGLAN' ? (
-                  // --- D. ÁO DÀI RAGLAN (1960s) ---
-                  <g id="ao-dai-raglan">
-                    {/* Tailored Body silhouette with feminine curves */}
+                  /* ----------------------------------------------------------- */
+                  /* D. ÁO DÀI RAGLAN (THẬP NIÊN 1960)                            */
+                  /* ----------------------------------------------------------- */
+                  <g id="robe-raglan">
                     <path
                       d="M122 116 L198 116 L208 456 Q160 464 112 456 Z"
                       fill="url(#coreFabric)"
                       stroke="#FDE68A"
                       strokeWidth="1.2"
                     />
-                    {/* High Standing Collar Lập Lĩnh */}
                     <rect x="145" y="92" width="30" height="12" rx="3" fill={activeColor} stroke="#FDE68A" strokeWidth="1.2" />
-                    
+
                     {/* Raglan Diagonal Seams (Nối xéo triệt tiêu nếp nhăn) */}
-                    <line x1="145" y1="104" x2="112" y2="150" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4 2" />
-                    <line x1="175" y1="104" x2="208" y2="150" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4 2" />
+                    <line x1="145" y1="104" x2="114" y2="148" stroke="#CCFF00" strokeWidth="1.8" strokeDasharray="4 2" />
+                    <line x1="175" y1="104" x2="206" y2="148" stroke="#CCFF00" strokeWidth="1.8" strokeDasharray="4 2" />
 
-                    {/* Fitted Wrist Sleeves */}
-                    <path d="M122 116 L92 238 L106 242 L132 146 Z" fill="url(#coreFabric)" />
-                    <path d="M198 116 L228 238 L214 242 L188 146 Z" fill="url(#coreFabric)" />
+                    {/* Fitted Wrist Sleeves (Ôm gọn cổ tay, không clip) */}
+                    <path
+                      d="M118 116 Q92 186 94 250 L106 252 Q116 186 130 144 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#FDE68A"
+                      strokeWidth="1"
+                    />
+                    <path
+                      d="M202 116 Q228 186 226 250 L214 252 Q204 186 190 144 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#FDE68A"
+                      strokeWidth="1"
+                    />
 
-                    {/* Side waist snap buttons */}
+                    {/* Delicate Hands emerging naturally */}
+                    {displayMode === 'FIGURE' && (
+                      <g id="raglan-hands">
+                        <path d="M96 252 Q94 266 98 270 Q102 266 104 252 Z" fill="url(#skinTone)" />
+                        <path d="M216 252 Q218 266 222 270 Q226 266 224 252 Z" fill="url(#skinTone)" />
+                      </g>
+                    )}
+
+                    {/* Side snap buttons */}
                     <circle cx="196" cy="172" r="2" fill="#FDE68A" />
                     <circle cx="196" cy="186" r="2" fill="#FDE68A" />
                   </g>
-
                 ) : coreId === 'core-ao-dai-lemur' || coreCat === 'AO_DAI_LEMUR' ? (
-                  // --- E. ÁO DÀI LE MUR (1930s) ---
-                  <g id="ao-dai-lemur">
+                  /* ----------------------------------------------------------- */
+                  /* E. ÁO DÀI LE MUR (CẢI CÁCH CÁT TƯỜNG 1930s)                */
+                  /* ----------------------------------------------------------- */
+                  <g id="robe-lemur">
                     <path
                       d="M122 116 L198 116 L206 450 Q160 460 114 450 Z"
                       fill="url(#coreFabric)"
                       stroke="#E9D5FF"
                       strokeWidth="1.2"
                     />
-                    {/* Romantic Lotus Collar (Cổ bẻ lá sen Pháp) */}
+                    {/* Lotus Collar */}
                     <ellipse cx="160" cy="106" rx="22" ry="8" fill="#6B21A8" stroke="#F3E8FF" strokeWidth="1.2" />
 
-                    {/* 3D Puffed Sleeves (Vai Bồng kiêu sa) */}
-                    <circle cx="110" cy="120" r="17" fill="url(#coreFabric)" stroke="#F3E8FF" strokeWidth="1" />
-                    <circle cx="210" cy="120" r="17" fill="url(#coreFabric)" stroke="#F3E8FF" strokeWidth="1" />
+                    {/* Puffed Sleeves (Vai bồng Parisienne) */}
+                    <circle cx="110" cy="118" r="16" fill="url(#coreFabric)" stroke="#F3E8FF" strokeWidth="1" />
+                    <circle cx="210" cy="118" r="16" fill="url(#coreFabric)" stroke="#F3E8FF" strokeWidth="1" />
 
-                    {/* Sleeves */}
-                    <path d="M104 132 L94 238 L108 242 L122 146 Z" fill="url(#coreFabric)" />
-                    <path d="M216 132 L226 238 L212 242 L198 146 Z" fill="url(#coreFabric)" />
+                    {/* Fitted Sleeves downwards */}
+                    <path
+                      d="M102 130 Q92 186 94 250 L106 252 Q114 186 122 142 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#E9D5FF"
+                      strokeWidth="1"
+                    />
+                    <path
+                      d="M218 130 Q228 186 226 250 L214 252 Q206 186 198 142 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#E9D5FF"
+                      strokeWidth="1"
+                    />
+
+                    {displayMode === 'FIGURE' && (
+                      <g id="lemur-hands">
+                        <path d="M96 252 Q94 266 98 270 Q102 266 104 252 Z" fill="url(#skinTone)" />
+                        <path d="M216 252 Q218 266 222 270 Q226 266 224 252 Z" fill="url(#skinTone)" />
+                      </g>
+                    )}
                   </g>
-
                 ) : coreId === 'core-ba-ba' || coreCat === 'BA_BA' ? (
-                  // --- F. ÁO BÀ BA NAM BỘ ---
-                  <g id="ao-ba-ba">
+                  /* ----------------------------------------------------------- */
+                  /* F. ÁO BÀ BA NAM BỘ                                          */
+                  /* ----------------------------------------------------------- */
+                  <g id="robe-ba-ba">
                     <path
                       d="M118 114 L202 114 L206 296 Q160 302 114 296 Z"
                       fill="url(#coreFabric)"
@@ -590,21 +950,40 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       strokeWidth="1.2"
                     />
                     {/* Clean Center Slit & Button Row */}
-                    <line x1="160" y1="110" x2="160" y2="294" stroke="#FDE68A" strokeWidth="2" strokeDasharray="3 3" />
+                    <line x1="160" y1="108" x2="160" y2="294" stroke="#FDE68A" strokeWidth="2" strokeDasharray="3 3" />
                     {[125, 155, 185, 215, 245, 275].map(y => (
                       <circle key={y} cx="160" cy={y} r="2.5" fill="#FDE68A" stroke="#78350F" strokeWidth="0.8" />
                     ))}
-                    {/* Two front patch pockets */}
+                    {/* Front Pockets */}
                     <rect x="128" y="250" width="22" height="24" rx="2" fill="none" stroke="#FDE68A" strokeWidth="1" />
                     <rect x="170" y="250" width="22" height="24" rx="2" fill="none" stroke="#FDE68A" strokeWidth="1" />
-                    {/* Sleeves */}
-                    <path d="M118 114 L94 238 L108 242 L130 146 Z" fill="url(#coreFabric)" />
-                    <path d="M202 114 L226 238 L212 242 L190 146 Z" fill="url(#coreFabric)" />
-                  </g>
 
+                    {/* Fitted Sleeves */}
+                    <path
+                      d="M118 114 Q92 186 94 250 L106 252 Q116 186 130 144 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1"
+                    />
+                    <path
+                      d="M202 114 Q228 186 226 250 L214 252 Q204 186 190 144 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1"
+                    />
+
+                    {displayMode === 'FIGURE' && (
+                      <g id="ba-ba-hands">
+                        <path d="M96 252 Q94 266 98 270 Q102 266 104 252 Z" fill="url(#skinTone)" />
+                        <path d="M216 252 Q218 266 222 270 Q226 266 224 252 Z" fill="url(#skinTone)" />
+                      </g>
+                    )}
+                  </g>
                 ) : coreId === 'core-tu-than' || coreCat === 'TU_THAN' ? (
-                  // --- G. ÁO TỨ THÂN KINH BẮC ---
-                  <g id="ao-tu-than">
+                  /* ----------------------------------------------------------- */
+                  /* G. ÁO TỨ THÂN KINH BẮC (THẮT VẠT LƯƠN)                      */
+                  /* ----------------------------------------------------------- */
+                  <g id="robe-tu-than">
                     {/* Open robe panels revealing the crimson yếm inside */}
                     <path
                       d="M114 114 L142 114 L138 416 L106 416 Z"
@@ -618,19 +997,38 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       stroke="#D69E2E"
                       strokeWidth="1.2"
                     />
-                    {/* Tied flap bow at waist (Thắt Vạt Lươn Duyên Dáng) */}
+                    {/* Tied flap bow at waist (Thắt Vạt Lươn) */}
                     <ellipse cx="160" cy="226" rx="15" ry="9" fill="#FDE68A" stroke="#B45309" strokeWidth="1.5" />
                     <path d="M152 232 Q144 282 138 316" stroke="#FDE68A" strokeWidth="3.2" strokeLinecap="round" />
                     <path d="M168 232 Q176 282 182 316" stroke="#FDE68A" strokeWidth="3.2" strokeLinecap="round" />
-                    {/* Sleeves */}
-                    <path d="M114 114 L94 238 L108 242 L130 146 Z" fill="url(#coreFabric)" />
-                    <path d="M206 114 L226 238 L212 242 L190 146 Z" fill="url(#coreFabric)" />
-                  </g>
 
+                    {/* Seamless sleeves */}
+                    <path
+                      d="M114 114 Q92 186 94 250 L106 252 Q116 186 130 144 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1"
+                    />
+                    <path
+                      d="M206 114 Q228 186 226 250 L214 252 Q204 186 190 144 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1"
+                    />
+
+                    {displayMode === 'FIGURE' && (
+                      <g id="tu-than-hands">
+                        <path d="M96 252 Q94 266 98 270 Q102 266 104 252 Z" fill="url(#skinTone)" />
+                        <path d="M216 252 Q218 266 222 270 Q226 266 224 252 Z" fill="url(#skinTone)" />
+                      </g>
+                    )}
+                  </g>
                 ) : (
-                  // --- H. ÁO NGŨ THÂN TAY CHẼN (CHUẨN MỰC MINH MẠNG) ---
-                  <g id="ao-ngu-than">
-                    {/* Robe Body flared in classic A-shape */}
+                  /* ----------------------------------------------------------- */
+                  /* H. ÁO NGŨ THÂN TAY CHẼN (CHUẨN MỰC QUỐC PHỤC TRIỀU NGUYỄN)  */
+                  /* ----------------------------------------------------------- */
+                  <g id="robe-ngu-than">
+                    {/* Flared A-line robe body */}
                     <path
                       d="M120 114 L200 114 L210 436 Q160 446 110 436 Z"
                       fill="url(#coreFabric)"
@@ -638,10 +1036,7 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       strokeWidth="1.5"
                     />
 
-                    {/* SỐNG LƯNG CHÍNH TRUNG (正中) GOLD SEAMLINE */}
-                    <line x1="160" y1="104" x2="160" y2="438" stroke="url(#goldSeam)" strokeWidth="1.8" />
-
-                    {/* High Standing Collar (Cổ Lập Lĩnh 2-3cm) */}
+                    {/* High Standing Collar (Lập Lĩnh 2-3cm) */}
                     <rect
                       x="145"
                       y="92"
@@ -653,26 +1048,17 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       strokeWidth="1.5"
                     />
 
-                    {/* Lapel Overlay: HỮU NHẬM (Trái đè Phải) vs TẢ NHẬM (Phải đè Trái) */}
+                    {/* Sống Lưng Chính Trung Seamline */}
+                    <line x1="160" y1="104" x2="160" y2="438" stroke="url(#goldSeam)" strokeWidth="1.8" />
+
+                    {/* Lapel Overlay: Hữu Nhậm vs Tả Nhậm */}
                     {isTaNham ? (
-                      // TẢ NHẬM (VI PHẠM TANG LỄ: Vạt Phải đè Vạt Trái)
-                      <path
-                        d="M175 104 Q150 142 124 154 L124 436"
-                        stroke="#EF4444"
-                        strokeWidth="2.5"
-                        fill="none"
-                      />
+                      <path d="M175 104 Q150 142 124 154 L124 436" stroke="#EF4444" strokeWidth="2.5" fill="none" />
                     ) : (
-                      // HỮU NHẬM (CHUẨN MỰC: Vạt Trái đè Vạt Phải)
-                      <path
-                        d="M145 104 Q170 142 196 154 L196 436"
-                        stroke="url(#goldSeam)"
-                        strokeWidth="2.5"
-                        fill="none"
-                      />
+                      <path d="M145 104 Q170 142 196 154 L196 436" stroke="url(#goldSeam)" strokeWidth="2.5" fill="none" />
                     )}
 
-                    {/* 5 Brass Buttons (Cúc Ngũ Thường / Ngũ Luân) */}
+                    {/* 5 Brass Buttons (Ngũ Thường: Nhân, Lễ, Nghĩa, Trí, Tín) */}
                     <g>
                       {[
                         { x: isTaNham ? 168 : 152, y: 108 },
@@ -693,9 +1079,33 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       ))}
                     </g>
 
-                    {/* Tapered Fitted Sleeves (Tay Chẽn) */}
-                    <path d="M120 114 L94 238 L108 242 L132 146 Z" fill="url(#coreFabric)" stroke="#D69E2E" strokeWidth="1" />
-                    <path d="M200 114 L226 238 L212 242 L188 146 Z" fill="url(#coreFabric)" stroke="#D69E2E" strokeWidth="1" />
+                    {/* SEAMLESS FITTED WRIST SLEEVES (TAY CHẼN) */}
+                    {/* Left Fitted Sleeve */}
+                    <path
+                      d="M120 114 Q92 186 94 250 L106 252 Q116 186 132 144 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1"
+                    />
+                    {/* Right Fitted Sleeve */}
+                    <path
+                      d="M200 114 Q228 186 226 250 L214 252 Q204 186 188 144 Z"
+                      fill="url(#coreFabric)"
+                      stroke="#D69E2E"
+                      strokeWidth="1"
+                    />
+
+                    {/* Hands emerging naturally at cuffs with jade rings */}
+                    {displayMode === 'FIGURE' && (
+                      <g id="ngu-than-hands">
+                        {/* Left Hand */}
+                        <path d="M96 252 Q94 266 98 270 Q102 266 104 252 Z" fill="url(#skinTone)" />
+                        <ellipse cx="99" cy="264" rx="1.5" ry="1.5" fill="#00F5D4" />
+                        {/* Right Hand */}
+                        <path d="M216 252 Q218 266 222 270 Q226 266 224 252 Z" fill="url(#skinTone)" />
+                        <ellipse cx="221" cy="264" rx="1.5" ry="1.5" fill="#00F5D4" />
+                      </g>
+                    )}
                   </g>
                 )}
 
@@ -703,12 +1113,12 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
             )}
 
             {/* =============================================================== */}
-            {/* 5. LAYER 4: OUTERWEAR / KHOÁC NGOÀI (CYBER ORGANZA TRENCH)      */}
+            {/* 6. LAYER 4: OUTERWEAR / KHOÁC NGOÀI (CYBER TRENCH / SA NGOÀI)   */}
             {/* =============================================================== */}
             {visibleLayers.outer && outfit.outerGarment && !isXRay && (
               <g id="layer-outer" filter="url(#softGlow)">
                 {outfit.outerGarment.id === 'outer-cyber-organza' ? (
-                  // Translucent Cyber Organza Silhouette (Nhìn xuyên thấu cổ phục bên trong)
+                  /* Translucent Cyber Organza Silhouette */
                   <g>
                     <path
                       d="M104 110 L216 110 L234 460 Q160 470 86 460 Z"
@@ -717,12 +1127,11 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                       strokeWidth="1.5"
                       strokeDasharray="5 3"
                     />
-                    {/* Techwear Buckle Chest Straps */}
                     <line x1="118" y1="176" x2="202" y2="176" stroke="#CCFF00" strokeWidth="2" />
                     <rect x="152" y="170" width="16" height="12" rx="2" fill="#CCFF00" />
                   </g>
                 ) : (
-                  // Áo Tấc Sa Khoác Ngoài
+                  /* Áo Tấc Sa Khoác Ngoài */
                   <g>
                     <path
                       d="M102 110 L218 110 L236 462 Q160 472 84 462 Z"
@@ -737,15 +1146,15 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
             )}
 
             {/* =============================================================== */}
-            {/* 6. LAYER 5: ACCESSORIES / PHỤ KIỆN (NÓN, KHĂN, KIỀNG BẠC)       */}
+            {/* 7. LAYER 5: ACCESSORIES / PHỤ KIỆN (KIỀNG, NÓN, KHĂN)           */}
             {/* =============================================================== */}
             {visibleLayers.accessory && (
               <g id="layer-accessories" filter="url(#softGlow)">
                 
-                {/* A. Kiềng Bạc Chạm Hoa Sen Cung Đình */}
+                {/* Kiềng Bạc Chạm Hoa Sen */}
                 {hasKiengBac && (
                   <path
-                    d="M142 110 Q160 126 178 110"
+                    d="M142 108 Q160 124 178 108"
                     stroke="#E2E8F0"
                     strokeWidth="3.2"
                     strokeLinecap="round"
@@ -753,61 +1162,56 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                   />
                 )}
 
-                {/* B. Khăn Rằn Nam Bộ Sọc Caro */}
+                {/* Khăn Rằn Nam Bộ */}
                 {hasKhanRan && (
                   <g id="acc-khan-ran">
-                    {/* Scarf draped gracefully around neck and shoulder */}
                     <path
-                      d="M146 104 Q160 114 174 104 L180 236 L168 236 L158 114 L148 214 L138 214 Z"
+                      d="M146 102 Q160 112 174 102 L180 234 L168 234 L158 112 L148 212 L138 212 Z"
                       fill="#38BDF8"
                       stroke="#0F172A"
                       strokeWidth="1.2"
                     />
-                    {/* Checkered pattern lines */}
-                    <line x1="140" y1="160" x2="180" y2="160" stroke="#FFFFFF" strokeWidth="1" />
-                    <line x1="140" y1="190" x2="180" y2="190" stroke="#FFFFFF" strokeWidth="1" />
+                    <line x1="140" y1="158" x2="180" y2="158" stroke="#FFFFFF" strokeWidth="1" />
+                    <line x1="140" y1="188" x2="180" y2="188" stroke="#FFFFFF" strokeWidth="1" />
                   </g>
                 )}
 
-                {/* C. Nón Ba Tầm / Nón Quai Thao (Kinh Bắc) */}
+                {/* Nón Ba Tầm / Quai Thao */}
                 {hasNonQuaiThao && (
                   <g id="acc-non-quai-thao">
-                    {/* Wide circular flat hat with brim */}
-                    <ellipse cx="160" cy="50" rx="58" ry="16" fill="#D69E2E" stroke="#FDE68A" strokeWidth="1.5" />
-                    <ellipse cx="160" cy="48" rx="50" ry="12" fill="#B45309" opacity="0.4" />
-                    {/* Long Silk Cords (Quai Thao) draping over both shoulders */}
-                    <path d="M120 54 Q105 130 112 210" stroke="#D69E2E" strokeWidth="2" fill="none" />
-                    <path d="M200 54 Q215 130 208 210" stroke="#D69E2E" strokeWidth="2" fill="none" />
-                    <circle cx="112" cy="212" r="3" fill="#FDE68A" />
-                    <circle cx="208" cy="212" r="3" fill="#FDE68A" />
+                    <ellipse cx="160" cy="48" rx="58" ry="16" fill="#D69E2E" stroke="#FDE68A" strokeWidth="1.5" />
+                    <ellipse cx="160" cy="46" rx="50" ry="12" fill="#B45309" opacity="0.4" />
+                    <path d="M120 52 Q105 128 112 208" stroke="#D69E2E" strokeWidth="2" fill="none" />
+                    <path d="M200 52 Q215 128 208 208" stroke="#D69E2E" strokeWidth="2" fill="none" />
+                    <circle cx="112" cy="210" r="3" fill="#FDE68A" />
+                    <circle cx="208" cy="210" r="3" fill="#FDE68A" />
                   </g>
                 )}
 
-                {/* D. Nón Lá Bài Thơ Xứ Huế */}
+                {/* Nón Lá Huế */}
                 {hasNonLa && (
                   <g id="acc-non-la">
-                    {/* Conical Hat Triangle */}
-                    <path d="M160 22 L112 66 L208 66 Z" fill="#FDE68A" stroke="#D69E2E" strokeWidth="1.2" />
-                    <line x1="126" y1="52" x2="194" y2="52" stroke="#D69E2E" strokeWidth="0.8" />
-                    <line x1="142" y1="38" x2="178" y2="38" stroke="#D69E2E" strokeWidth="0.8" />
+                    <path d="M160 20 L112 64 L208 64 Z" fill="#FDE68A" stroke="#D69E2E" strokeWidth="1.2" />
+                    <line x1="126" y1="50" x2="194" y2="50" stroke="#D69E2E" strokeWidth="0.8" />
+                    <line x1="142" y1="36" x2="178" y2="36" stroke="#D69E2E" strokeWidth="0.8" />
                   </g>
                 )}
 
-                {/* E. Khăn Vành Dây Hoàng Tộc / Khăn Đóng */}
+                {/* Khăn Vành Dây Hoàng Tộc */}
                 {hasKhanVanh && (
                   <g id="acc-khan-vanh">
                     <path
-                      d="M138 52 Q160 46 182 52 L186 64 Q160 60 134 64 Z"
+                      d="M138 50 Q160 44 182 50 L186 62 Q160 58 134 62 Z"
                       fill="#D69E2E"
                       stroke="#FDE68A"
                       strokeWidth="1.2"
                     />
-                    <line x1="136" y1="56" x2="184" y2="56" stroke="#FDE68A" strokeWidth="1" />
-                    <line x1="135" y1="60" x2="185" y2="60" stroke="#FDE68A" strokeWidth="1" />
+                    <line x1="136" y1="54" x2="184" y2="54" stroke="#FDE68A" strokeWidth="1" />
+                    <line x1="135" y1="58" x2="185" y2="58" stroke="#FDE68A" strokeWidth="1" />
                   </g>
                 )}
 
-                {/* F. Ngoại lai: Kimono Obi (Alert Visual) */}
+                {/* Lai căng: Kimono Obi Alert */}
                 {hasForeignObi && (
                   <g id="foreign-obi">
                     <rect x="122" y="196" width="76" height="28" rx="2" fill="#DC2626" stroke="#FFFFFF" strokeWidth="2" />
@@ -817,7 +1221,7 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                   </g>
                 )}
 
-                {/* G. Ngoại lai: Hanfu Ruqun Ribbon (Alert Visual) */}
+                {/* Lai căng: Hanfu Ruqun Ribbon Alert */}
                 {hasForeignRuqun && (
                   <g id="foreign-ruqun">
                     <rect x="134" y="132" width="52" height="14" rx="2" fill="#E11D48" stroke="#FFFFFF" strokeWidth="1.5" />
@@ -831,12 +1235,12 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
             )}
 
             {/* =============================================================== */}
-            {/* 7. LAYER 6: FOOTWEAR / GIÀY DÉP (CHUNKY SNEAKER / GUỐC MỘC)     */}
+            {/* 8. LAYER 6: FOOTWEAR / GIÀY DÉP                                 */}
             {/* =============================================================== */}
             {visibleLayers.footwear && (
               <g id="layer-footwear">
                 {outfit.footwear?.id === 'acc-sneaker-chunky' ? (
-                  // Chunky Sneaker Cyber Lime
+                  /* Chunky Sneaker Cyber Lime */
                   <g>
                     <rect x="134" y="476" width="22" height="16" rx="4" fill="#FFFFFF" stroke="#CCFF00" strokeWidth="1.6" />
                     <rect x="164" y="476" width="22" height="16" rx="4" fill="#FFFFFF" stroke="#CCFF00" strokeWidth="1.6" />
@@ -844,32 +1248,14 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
                     <line x1="164" y1="488" x2="186" y2="488" stroke="#00F5D4" strokeWidth="2" />
                   </g>
                 ) : (
-                  // Guốc mộc quai nhung đỏ son
+                  /* Guốc Mộc Quai Nhung Đỏ Son */
                   <g>
-                    <rect x="136" y="482" width="18" height="6" rx="1" fill="#78350F" />
-                    <path d="M139 482 Q145 476 151 482" stroke="#C53030" strokeWidth="2" fill="none" />
-                    <rect x="166" y="482" width="18" height="6" rx="1" fill="#78350F" />
-                    <path d="M169 482 Q175 476 181 482" stroke="#C53030" strokeWidth="2" fill="none" />
+                    <ellipse cx="145" cy="486" rx="10" ry="4" fill="#78350F" />
+                    <ellipse cx="175" cy="486" rx="10" ry="4" fill="#78350F" />
+                    <path d="M140 484 Q145 480 150 484" stroke="#BE123C" strokeWidth="2.5" fill="none" />
+                    <path d="M170 484 Q175 480 180 484" stroke="#BE123C" strokeWidth="2.5" fill="none" />
                   </g>
                 )}
-              </g>
-            )}
-
-            {/* =============================================================== */}
-            {/* 8. X-RAY MODE LASER ANATOMY (SỐNG LƯNG CHÍNH TRUNG OVERLAY)     */}
-            {/* =============================================================== */}
-            {isXRay && (
-              <g id="layer-xray" pointerEvents="none">
-                {/* Cyan Sống Lưng Laser Line */}
-                <line x1="160" y1="90" x2="160" y2="480" stroke="#00F5D4" strokeWidth="2.5" strokeDasharray="6 3" />
-                <circle cx="160" cy="110" r="5" fill="#00F5D4" opacity="0.8" />
-                <circle cx="160" cy="220" r="5" fill="#00F5D4" opacity="0.8" />
-                <circle cx="160" cy="360" r="5" fill="#00F5D4" opacity="0.8" />
-                {/* Anatomy Text Pointer */}
-                <rect x="80" y="210" width="70" height="18" rx="3" fill="#042F2E" stroke="#00F5D4" strokeWidth="1" />
-                <text x="115" y="222" fill="#00F5D4" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
-                  CHÍNH TRUNG
-                </text>
               </g>
             )}
 
@@ -879,79 +1265,117 @@ export const MannequinCanvas2D: React.FC<MannequinCanvas2DProps> = ({
       </div>
 
       {/* ===================================================================== */}
-      {/* CANVAS DOCK: INTERACTIVE FITTING TOOLS & CULTURAL CONTROLS             */}
+      {/* CANVAS DOCK: CLEAN BOTTOM UTILITY BAR                                  */}
       {/* ===================================================================== */}
-      <div className="w-full pt-2.5 border-t border-white/10 space-y-2.5 z-20">
+      <div className="w-full pt-2.5 border-t border-stone-200/80 flex flex-wrap items-center justify-between gap-2 z-20 text-xs">
         
-        {/* Row 1: Flip Lapel (Hữu Nhậm vs Tả Nhậm) & Color Dyeing Swatches */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          
-          {/* Flip Lapel Test Button */}
-          <button
-            onClick={onToggleLapel}
-            className={`px-3 py-1.5 rounded-lg font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm text-xs ${
-              isTaNham
-                ? 'bg-rose-600 text-white shadow-rule-error animate-pulse'
-                : 'bg-heritage-hoang/20 hover:bg-heritage-hoang/30 text-amber-200 border border-heritage-hoang/40'
-            }`}
-            title="Đảo chiều vạt áo để kiểm thử quy chuẩn Hữu Nhậm / Tả Nhậm"
-          >
-            <ArrowRightLeft className="w-3.5 h-3.5" />
-            <span>{isTaNham ? 'Đang Tả Nhậm (Click Sửa)' : 'Đảo Vạt (Thử Tả Nhậm)'}</span>
-          </button>
+        {/* Flip Lapel Test Button */}
+        <button
+          onClick={onToggleLapel}
+          className={`px-3 py-1.5 rounded-lg font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs text-xs border ${
+            isTaNham
+              ? 'bg-amber-600 text-white border-amber-600'
+              : 'bg-white hover:bg-stone-50 text-stone-800 border-stone-200'
+          }`}
+          title="Kiểm tra quy chuẩn khép vạt Hữu Nhậm / Tả Nhậm"
+        >
+          <ArrowRightLeft className="w-3.5 h-3.5 text-amber-700" />
+          <span>{isTaNham ? 'Đang Tả Nhậm (Click Sửa)' : 'Vạt Hữu Nhậm Chuẩn'}</span>
+        </button>
 
-          {/* Color Silk Swatches */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-neutral-400 font-mono text-[10px] hidden sm:inline">Nhuộm Tơ Lụa:</span>
-            <div className="flex items-center gap-1">
-              {SILK_PALETTES.map(c => (
-                <button
-                  key={c.hex}
-                  onClick={() => setActiveColor(c.hex)}
-                  className={`w-5 h-5 rounded-full border transition-transform cursor-pointer ${
-                    activeColor === c.hex ? 'scale-125 border-white shadow-md ring-2 ring-heritage-hoang' : 'border-white/20 hover:scale-110'
-                  }`}
-                  style={{ backgroundColor: c.hex }}
-                  title={c.name}
-                  aria-label={c.name}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Row 2: Layer Visibility Checklist Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-white/5 text-[10px] font-mono text-neutral-400">
-          <span className="flex items-center gap-1">
-            <Layers className="w-3 h-3 text-heritage-hoang" />
-            <span>Lớp Đồ (Toggle):</span>
-          </span>
-          <div className="flex flex-wrap gap-1">
-            {[
-              { key: 'base', label: 'Nội y' },
-              { key: 'core', label: 'Áo chính' },
-              { key: 'bottom', label: 'Hạ y' },
-              { key: 'outer', label: 'Khoác' },
-              { key: 'accessory', label: 'Phụ kiện' },
-              { key: 'footwear', label: 'Giày dép' }
-            ].map(item => (
-              <button
-                key={item.key}
-                onClick={() => toggleLayer(item.key as any)}
-                className={`px-2 py-0.5 rounded transition-colors cursor-pointer text-[10px] ${
-                  visibleLayers[item.key as keyof typeof visibleLayers]
-                    ? 'bg-white/10 text-white font-medium'
-                    : 'bg-transparent text-neutral-600 line-through'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
+        {/* Skin Tone Selector */}
+        <div className="flex items-center gap-1.5 text-[11px] font-mono">
+          <span className="text-stone-500 hidden sm:inline">Nước Da:</span>
+          {[
+            { id: 'IVORY', label: 'Trắng Ngà', color: '#ECD9C8' },
+            { id: 'HONEY', label: 'Bánh Mật', color: '#C89D7A' },
+            { id: 'ROSE', label: 'Trắng Hồng', color: '#FAD8D0' },
+          ].map(st => (
+            <button
+              key={st.id}
+              onClick={() => setSkinToneType(st.id as any)}
+              className={`px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition-all cursor-pointer border ${
+                skinToneType === st.id ? 'bg-amber-100 text-amber-900 font-bold border-amber-300' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full border border-black/20" style={{ backgroundColor: st.color }} />
+              <span>{st.label}</span>
+            </button>
+          ))}
         </div>
 
       </div>
 
+      {/* ===================================================================== */}
+      {/* CAMERA / FACE TRY-ON MODAL                                            */}
+      {/* ===================================================================== */}
+      {isCameraModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="relative w-full max-w-md bg-white border border-stone-200 rounded-2xl p-6 shadow-2xl space-y-4 text-center">
+            
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-amber-700" />
+                <h4 className="font-imperial font-bold text-stone-900 text-base">
+                  Thử Mặt Cá Nhân (Face Try-On)
+                </h4>
+              </div>
+              <button
+                onClick={stopCamera}
+                className="p-1 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-stone-600">
+              Chụp ảnh selfie trực tiếp từ webcam hoặc tải ảnh chân dung cận mặt để ướm lên ma-nơ-canh cổ phục.
+            </p>
+
+            {/* Webcam Video Preview or Upload Box */}
+            <div className="relative w-60 h-60 mx-auto rounded-full overflow-hidden border-4 border-amber-500 bg-stone-900 flex items-center justify-center shadow-inner">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover transform -scale-x-100"
+              />
+              <div className="absolute inset-0 border-2 border-dashed border-white/40 rounded-full pointer-events-none" />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={capturePhoto}
+                className="px-5 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-bold font-mono text-xs flex items-center gap-2 shadow-xs cursor-pointer"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Chụp Ảnh Thử Đồ</span>
+              </button>
+
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 font-mono text-xs flex items-center gap-2 cursor-pointer"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Tải Ảnh Từ Máy</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+
+export default MannequinCanvas2D;

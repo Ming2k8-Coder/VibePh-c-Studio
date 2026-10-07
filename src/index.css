@@ -10,16 +10,22 @@
   --color-cyber-lime: #CCFF00;
   --color-cyber-jade: #00F5D4;
   --backdrop-blur-organza: 16px;
-  --shadow-heritage-glow: 0 0 25px rgba(214, 158, 46, 0.35);
-  --shadow-rule-error: 0 0 25px rgba(197, 48, 48, 0.55);
+  --shadow-heritage-glow: 0 0 25px -5px rgba(204, 255, 0, 0.25);
+  --shadow-rule-error: 0 0 20px -2px rgba(197, 48, 48, 0.45);
   --shadow-cyber-glow: 0 0 25px rgba(204, 255, 0, 0.3);
+}
+
+/* Folk printing halftone dot pattern utility */
+.bg-halftone-dot {
+  background-image: radial-gradient(circle, currentColor 1.2px, transparent 1.2px);
+  background-size: 16px 16px;
 }
 
 @layer base {
   body {
     font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
-    background-color: #0E0F12;
-    color: #E3E2E6;
+    background-color: #F8F9FA;
+    color: #1E2024;
     overflow-x: hidden;
   }
 
@@ -49,7 +55,7 @@
 /* Hairline borders & Organza texture */
 .border-organza {
   border-width: 0.5px;
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .backdrop-blur-organza {

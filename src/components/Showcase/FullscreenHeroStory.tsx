@@ -32,7 +32,7 @@ if (typeof window !== 'undefined') {
 
 interface NarrativeLink {
   label: string;
-  route: 'atelier' | 'ai-studio' | 'rules' | 'lookbooks';
+  route: 'atelier' | 'ai-studio' | 'rules' | 'lookbooks' | 'wiki';
   icon: 'layers' | 'wand' | 'book' | 'bookmark';
   highlight?: boolean;
 }
@@ -63,7 +63,7 @@ const ACTS_NARRATIVES: ActNarrative[] = [
       highlight: true
     },
     secondaryAction: {
-      label: 'Quy thức Hữu Nhậm',
+      label: 'Wiki Cổ Phục & Timelines',
       route: 'rules',
       icon: 'book'
     }
@@ -114,14 +114,14 @@ const ACTS_NARRATIVES: ActNarrative[] = [
     titleSubColor: 'text-cyber-lime',
     desc: 'Cổ phục bung nở cùng chunky sneaker, áo khoác Cyber Organza xuyên thấu, chất liệu denim tái chế và sắc neon Cyber Lime. Vừa kiêu hãnh cội nguồn, vừa bứt phá tự do cho thế hệ đương đại.',
     primaryAction: {
-      label: 'Mở Xưởng Phối Đồ 3D',
+      label: 'Mở Xưởng Phối Đồ AI Atelier',
       route: 'atelier',
       icon: 'layers',
       highlight: true
     },
     secondaryAction: {
-      label: 'Gemini AI Studio',
-      route: 'ai-studio',
+      label: 'Wiki Cổ Phục',
+      route: 'wiki',
       icon: 'wand'
     }
   }
@@ -155,11 +155,10 @@ export const FullscreenHeroStory: React.FC<FullscreenHeroStoryProps> = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   // Relative link navigation helper
-  const navigateRelative = (route: 'atelier' | 'ai-studio' | 'rules' | 'lookbooks') => {
+  const navigateRelative = (route: 'atelier' | 'ai-studio' | 'rules' | 'lookbooks' | 'wiki') => {
     window.location.hash = `#/${route}`;
-    if (route === 'atelier') onEnterAtelier();
-    else if (route === 'rules') onExploreRules();
-    else if (route === 'ai-studio' && onOpenAiStudio) onOpenAiStudio();
+    if (route === 'atelier' || route === 'ai-studio') onEnterAtelier();
+    else if (route === 'rules' || route === 'wiki') onExploreRules();
     else if (route === 'lookbooks' && onOpenLookbooks) onOpenLookbooks();
   };
 
@@ -601,7 +600,7 @@ export const FullscreenHeroStory: React.FC<FullscreenHeroStoryProps> = ({
           </div>
 
           {/* --------------------------------------------------------------------- */}
-          {/* RIGHT 3D VISUAL STAGE: CLEAN, FOCUSED COSTUME CANVAS                  */}
+          {/* RIGHT 2D VISUAL STAGE: CLEAN, FOCUSED COSTUME CANVAS                  */}
           {/* --------------------------------------------------------------------- */}
           <div
             ref={cameraRigRef}
@@ -827,7 +826,7 @@ export const FullscreenHeroStory: React.FC<FullscreenHeroStoryProps> = ({
             className="px-6 py-2.5 rounded-full bg-cyber-lime hover:bg-lime-400 text-black font-bold text-xs font-mono flex items-center gap-2 shadow-cyber-glow cursor-pointer w-fit"
           >
             <Layers className="w-4 h-4" />
-            <span>Vào Xưởng Atelier 3D</span>
+            <span>Vào Xưởng Atelier 2D</span>
           </button>
         </div>
 
@@ -838,7 +837,7 @@ export const FullscreenHeroStory: React.FC<FullscreenHeroStoryProps> = ({
             className="p-4 rounded-xl bg-obsidian-800/80 border border-white/10 hover:border-cyber-lime/40 transition-all flex flex-col justify-between min-h-[140px]"
           >
             <div>
-              <h4 className="font-imperial font-bold text-base text-white">Xưởng Phối Đồ 3D</h4>
+              <h4 className="font-imperial font-bold text-base text-white">Xưởng Phối Đồ AI 2D</h4>
               <p className="text-xs text-neutral-400 mt-1">
                 Phối đồ ma-nơ-canh 2D theo điển chế trang nghiêm.
               </p>
@@ -870,13 +869,17 @@ export const FullscreenHeroStory: React.FC<FullscreenHeroStoryProps> = ({
             className="p-4 rounded-xl bg-obsidian-800/80 border border-white/10 hover:border-heritage-hoang/40 transition-all flex flex-col justify-between min-h-[140px]"
           >
             <div>
-              <h4 className="font-imperial font-bold text-base text-white">Điển Lệ Cổ Phục</h4>
+              <div className="flex items-center gap-1.5 text-heritage-hoang text-xs font-mono font-bold uppercase mb-1">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Wiki Cổ Phục & Timelines</span>
+              </div>
+              <h4 className="font-imperial font-bold text-base text-white">Bách Khoa Cổ Phục</h4>
               <p className="text-xs text-neutral-400 mt-1">
-                Quy thức Hữu Nhậm và 4 điều cấm kỵ văn hóa.
+                Niên biểu lịch sử qua các triều đại, chi tiết 6 hệ trang phục và quy thức Hữu Nhậm.
               </p>
             </div>
             <span className="text-xs font-mono text-heritage-hoang mt-3 flex items-center gap-1">
-              Xem Quy Thức <ArrowRight className="w-3 h-3" />
+              Khám Phá Wiki & Timelines <ArrowRight className="w-3 h-3" />
             </span>
           </a>
 

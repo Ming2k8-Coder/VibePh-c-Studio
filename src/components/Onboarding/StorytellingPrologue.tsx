@@ -136,7 +136,7 @@ export const StorytellingPrologue: React.FC<StorytellingPrologueProps> = ({ onCo
         </div>
 
         {/* ========================================================================= */}
-        {/* 3D GARMENT ARTIFACT CANVAS */}
+        {/* 2D GARMENT ARTIFACT CANVAS */}
         {/* ========================================================================= */}
         <div className="relative w-full max-w-lg aspect-[4/5] flex items-center justify-center">
           {/* SVG Frame for Thread & Garment Architecture */}
@@ -173,7 +173,7 @@ export const StorytellingPrologue: React.FC<StorytellingPrologueProps> = ({ onCo
               />
             </svg>
 
-            {/* HỒI 2: CÁNH VẢI 3D GẬP HỮU NHẬM (Left over Right) */}
+            {/* HỒI 2: CÁNH VẢI 2D GẬP HỮU NHẬM (Left over Right) */}
             <div className="relative w-full h-full flex items-center justify-center z-10">
               
               {/* VẠT PHẢI (Nằm dưới - Right Flap) */}

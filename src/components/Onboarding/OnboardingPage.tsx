@@ -1,1183 +1,453 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion, AnimatePresence } from 'motion/react';
+'use client';
+
+import React from 'react';
+import { motion } from 'framer-motion';
 import {
-  Compass,
   Layers,
   Sparkles,
   BookOpen,
-  BookmarkCheck,
   ArrowRight,
   ShieldCheck,
+  Crown,
+  Wand2,
+  FileCheck2,
   CheckCircle2,
-  AlertTriangle,
-  RotateCcw,
-  ChevronDown,
-  ArrowDown,
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
-  Maximize2,
-  Minimize2,
-  Flame,
-  Check,
-  Info,
-  Sliders
+  Compass,
+  Palette,
+  HeartHandshake
 } from 'lucide-react';
-import {
-  HeroHeritageIllustration,
-  NguThanArtwork,
-  NhatBinhArtwork,
-  AoTacArtwork,
-  TuThanArtwork,
-  BaBaArtwork,
-  FiveElementsWheelAsset,
-  HuuNhamComparisonAsset
-} from '../Assets/HeritageIllustrations';
 
 interface OnboardingPageProps {
-  onNavigate: (route: 'atelier' | 'ai-studio' | 'rules' | 'lookbooks') => void;
+  onNavigate: (route: 'atelier' | 'ai-studio' | 'rules' | 'lookbooks' | 'wiki') => void;
 }
 
-const FIVE_VIRTUES = [
-  { name: 'Nhân', symbol: '仁', meaning: 'Lòng nhân ái, bác ái, trân quý sinh mệnh', element: 'Mộc', color: '#16A34A' },
-  { name: 'Lễ', symbol: '禮', meaning: 'Kính cẩn, phép tắc, tôn ti trật tự xã hội', element: 'Hỏa', color: '#DC2626' },
-  { name: 'Nghĩa', symbol: '義', meaning: 'Chính trực, phụng sự lẽ phải, trung nghĩa', element: 'Kim', color: '#F8FAFC' },
-  { name: 'Trí', symbol: '智', meaning: 'Sự sáng suốt, thấu triệt quy luật tự nhiên', element: 'Thủy', color: '#0284C7' },
-  { name: 'Tín', symbol: '信', meaning: 'Chữ tín son sắt, danh dự người mặc', element: 'Thổ', color: '#EAB308' },
-];
-
 export const OnboardingPage: React.FC<OnboardingPageProps> = ({ onNavigate }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const scrollySectionRef = useRef<HTMLDivElement>(null);
-  const shouldReduceMotion = useReducedMotion();
-
-  // State Management
-  const [showCurtainIntro, setShowCurtainIntro] = useState<boolean>(true);
-  const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(false);
-  const [currentChapter, setCurrentChapter] = useState<number>(0);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-
-  // Scroll tracking on the scrollytelling container (420vh for generous cinematic pacing)
-  const { scrollYProgress } = useScroll({
-    target: scrollySectionRef,
-    offset: ['start start', 'end end'],
-  });
-
-  // Global window scroll progress for top progress bar
-  const { scrollYProgress: globalScrollProgress } = useScroll();
-
-  // =========================================================================
-  // HOOK DEFINITIONS AT TOP LEVEL (STRICT HOOK RULES ENFORCED - ZERO CONDITIONAL CALLS)
-  // =========================================================================
-
-  // Chapter 1: Sống Lưng Chính Trung (0.02 -> 0.30)
-  const panelSpread = useTransform(scrollYProgress, [0.03, 0.28], ['160px', '0px']);
-  const negativePanelSpread = useTransform(panelSpread, (v) => `-${v}`);
-  const seamHeight = useTransform(scrollYProgress, [0.06, 0.30], ['0%', '100%']);
-  const seamGlow = useTransform(scrollYProgress, [0.15, 0.30], [0.1, 1]);
-  const chap1Opacity = useTransform(scrollYProgress, [0.0, 0.26, 0.33], [1, 1, 0]);
-
-  // Transition Curtain Eclipse between Chap 1 and Chap 2 (0.31 -> 0.36)
-  const eclipse1To2 = useTransform(scrollYProgress, [0.29, 0.32, 0.35], [0, 0.95, 0]);
-
-  // Chapter 2: Quy Thức Hữu Nhậm & 5 Cúc Ngũ Thường (0.34 -> 0.66)
-  const flapSwoopX = useTransform(scrollYProgress, [0.34, 0.49], ['-220px', '0px']);
-  const flapRotateY = useTransform(scrollYProgress, [0.34, 0.49], [-30, 0]);
-  const btn1 = useTransform(scrollYProgress, [0.42, 0.46], [0, 1]);
-  const btn2 = useTransform(scrollYProgress, [0.46, 0.50], [0, 1]);
-  const btn3 = useTransform(scrollYProgress, [0.50, 0.54], [0, 1]);
-  const btn4 = useTransform(scrollYProgress, [0.54, 0.58], [0, 1]);
-  const btn5 = useTransform(scrollYProgress, [0.58, 0.62], [0, 1]);
-  const chap2Opacity = useTransform(scrollYProgress, [0.33, 0.38, 0.63, 0.67], [0, 1, 1, 0]);
-
-  // Transition Curtain Eclipse between Chap 2 and Chap 3 (0.65 -> 0.70)
-  const eclipse2To3 = useTransform(scrollYProgress, [0.63, 0.66, 0.69], [0, 0.95, 0]);
-
-  // Chapter 3: Gen Z Streetwear Fusion (0.67 -> 1.00)
-  const cyberOverlayOpacity = useTransform(scrollYProgress, [0.68, 0.85], [0, 1]);
-  const cyberScale = useTransform(scrollYProgress, [0.68, 0.88], [0.90, 1]);
-  const hisScoreCounter = useTransform(scrollYProgress, [0.72, 0.94], [40, 98]);
-  const chap3Opacity = useTransform(scrollYProgress, [0.66, 0.71, 0.98, 1.0], [0, 1, 1, 1]);
-
-  // Sync scroll position to chapter index
-  useEffect(() => {
-    const unsub = scrollYProgress.on('change', (v) => {
-      let chap = 0;
-      if (v < 0.33) {
-        chap = 0;
-      } else if (v < 0.66) {
-        chap = 1;
-      } else {
-        chap = 2;
-      }
-
-      if (chap !== currentChapter) {
-        setCurrentChapter(chap);
-      }
-    });
-
-    return () => unsub();
-  }, [scrollYProgress, currentChapter]);
-
-  // Auto-scroll Presentation Engine
-  useEffect(() => {
-    let animId: number;
-    let lastTime: number = performance.now();
-
-    const step = (time: number) => {
-      if (!isAutoPlaying || !scrollySectionRef.current) return;
-      const deltaTime = time - lastTime;
-      lastTime = time;
-
-      const container = scrollySectionRef.current;
-      const start = container.offsetTop;
-      const maxScroll = start + container.scrollHeight - window.innerHeight;
-
-      if (window.scrollY >= maxScroll - 10) {
-        setIsAutoPlaying(false);
-        return;
-      }
-
-      // Smooth scroll advance ~ 180px per second for cinema pacing
-      const scrollStep = (180 * deltaTime) / 1000;
-      window.scrollBy({ top: scrollStep, behavior: 'auto' });
-
-      animId = requestAnimationFrame(step);
-    };
-
-    if (isAutoPlaying) {
-      lastTime = performance.now();
-      animId = requestAnimationFrame(step);
-    }
-
-    return () => {
-      if (animId) cancelAnimationFrame(animId);
-    };
-  }, [isAutoPlaying]);
-
-  // Stop auto-play on user manual wheel
-  useEffect(() => {
-    const handleUserWheel = () => {
-      if (isAutoPlaying) {
-        setIsAutoPlaying(false);
-      }
-    };
-    window.addEventListener('wheel', handleUserWheel, { passive: true });
-    window.addEventListener('touchmove', handleUserWheel, { passive: true });
-    return () => {
-      window.removeEventListener('wheel', handleUserWheel);
-      window.removeEventListener('touchmove', handleUserWheel);
-    };
-  }, [isAutoPlaying]);
-
-  const scrollToPhase = (targetPercent: number) => {
-    if (!scrollySectionRef.current) return;
-    const target = scrollySectionRef.current;
-    const offset = target.offsetTop;
-    const totalHeight = target.scrollHeight - window.innerHeight;
-    window.scrollTo({
-      top: offset + totalHeight * targetPercent,
-      behavior: 'smooth',
-    });
-  };
-
-  const handleStartDebut = (auto: boolean) => {
-    setShowCurtainIntro(false);
-    if (auto) {
-      if (scrollySectionRef.current) {
-        window.scrollTo({ top: scrollySectionRef.current.offsetTop, behavior: 'smooth' });
-      }
-      setTimeout(() => {
-        setIsAutoPlaying(true);
-      }, 700);
-    } else {
-      if (scrollySectionRef.current) {
-        window.scrollTo({ top: scrollySectionRef.current.offsetTop, behavior: 'smooth' });
-      }
-    }
-  };
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen().catch(() => {});
-      setIsFullscreen(false);
-    }
-  };
-
   return (
-    <div ref={containerRef} className="w-full relative bg-obsidian-900 text-[#E3E2E6] overflow-x-hidden selection:bg-heritage-hoang/30 selection:text-heritage-hoang">
+    <div className="relative min-h-screen bg-[#FAF9F5] text-[#1E2024] pb-24 font-sans selection:bg-amber-100 selection:text-amber-900">
       
-      {/* 1. TOP SCROLL PROGRESS BAR (HAIRLINE GOLDEN GRADIENT) */}
-      <motion.div
-        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-heritage-hoang via-amber-300 to-cyber-lime z-50 origin-left"
-        style={{ scaleX: globalScrollProgress }}
-      />
-
-      {/* ========================================================================= */}
-      {/* 2. CINEMATIC CURTAIN INTRO (MÀN ĐEN HUYỀN BÍ + HƯỚNG DẪN BẮT ĐẦU) */}
-      {/* ========================================================================= */}
-      <AnimatePresence>
-        {showCurtainIntro && (
-          <motion.div
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-50 bg-[#0E0F12] flex flex-col items-center justify-center p-6 sm:p-10 text-center"
-          >
-            {/* Ambient Background Gold Embers */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(214,158,46,0.15),transparent_70%)] pointer-events-none" />
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.6 }}
-              className="relative z-10 max-w-2xl space-y-6"
-            >
-              {/* Debut Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-m3-full bg-heritage-hoang/15 border border-heritage-hoang/40 text-xs font-mono font-semibold text-amber-200">
-                <Sparkles className="w-4 h-4 text-heritage-hoang" />
-                <span>VIBEPHỤC STUDIO • OFFICIAL PRESENTATION DEBUT</span>
-              </div>
-
-              {/* Grand Cinematic Title */}
-              <h1 className="text-4xl sm:text-6xl font-imperial font-bold text-white tracking-tight leading-tight">
-                Hành Trình Khởi Nguyên <br />
-                <span className="text-heritage-hoang font-imperial">Di Sản Văn Hiến 2026</span>
-              </h1>
-
-              <p className="text-base sm:text-lg text-neutral-300 leading-relaxed font-sans max-w-xl mx-auto">
-                Trải nghiệm Scrollytelling toàn màn hình kết hợp quy thức Cổ Phục triều Nguyễn với làn sóng Gen Z Streetwear. Bạn có thể chọn tự động trình chiếu hoặc tự do cuộn chuột.
-              </p>
-
-              {/* Debut Presentation Action Options */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <button
-                  onClick={() => handleStartDebut(true)}
-                  className="w-full sm:w-auto px-8 py-4 rounded-m3-full bg-heritage-hoang hover:bg-amber-400 text-black font-bold text-sm font-mono flex items-center justify-center gap-2.5 shadow-heritage-glow hover:scale-105 transition-all cursor-pointer"
-                >
-                  <Play className="w-4 h-4 fill-black" />
-                  <span>Bắt Đầu Tự Động Trình Diễn (Auto-Scroll)</span>
-                </button>
-
-                <button
-                  onClick={() => handleStartDebut(false)}
-                  className="w-full sm:w-auto px-7 py-4 rounded-m3-full bg-white/10 hover:bg-white/20 text-white font-medium text-sm font-mono flex items-center justify-center gap-2 border border-white/20 transition-all cursor-pointer"
-                >
-                  <ChevronDown className="w-4 h-4 text-heritage-hoang" />
-                  <span>Tự Do Cuộn Khám Phá (Interactive)</span>
-                </button>
-              </div>
-
-              {/* Navigation Guide */}
-              <div className="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-neutral-400 border-t border-white/10">
-                <span className="flex items-center gap-1.5 text-amber-200">
-                  <span className="w-2 h-2 rounded-full bg-heritage-hoang animate-ping" />
-                  Khuyên dùng màn hình máy tính hoặc xoay ngang điện thoại để trải nghiệm trọn vẹn
-                </span>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ========================================================================= */}
-      {/* 3. HERO VIEWPORT HEADER */}
-      {/* ========================================================================= */}
-      <section className="relative w-full min-h-[85vh] flex items-center justify-center border-b border-white/10 bg-radial from-[#1A1612] via-obsidian-900 to-obsidian-900 px-6 sm:px-12 py-16 overflow-hidden">
-        <div className="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center z-10">
-          
-          {/* Left Text Intro (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-m3-full bg-heritage-hoang/15 border border-heritage-hoang/40 text-xs font-semibold text-amber-200">
-              <Sparkles className="w-4 h-4 text-heritage-hoang" />
-              <span>Chương Trình Khởi Nguyên • Cổ Phục x Streetwear 2026</span>
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-imperial font-bold text-white tracking-tight leading-tight">
-              Di Sản Văn Hiến <br />
-              <span className="text-heritage-hoang font-imperial">Sống Trên Từng Bước Chân</span>
-            </h1>
-
-            <p className="text-base sm:text-lg text-neutral-300 leading-relaxed font-sans max-w-2xl">
-              Chào mừng bạn đến với <strong>VibePhục Studio</strong> — Không gian thời trang tương tác đưa phục sức triều Nguyễn & Đại Việt hòa mình vào nhịp thở Gen Z đương đại. Chúng tôi bảo tồn quy thức tiền nhân, đồng thời trao quyền cho sự sáng tạo tự do.
-            </p>
-
-            {/* Fast Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3.5 pt-2">
-              <a
-                href="#/atelier"
-                onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-                className="px-6 py-3 rounded-m3-full bg-heritage-hoang hover:bg-amber-400 text-black font-bold text-xs sm:text-sm font-mono transition-all shadow-heritage-glow hover:scale-105 flex items-center gap-2 cursor-pointer"
-              >
-                <Layers className="w-4 h-4" />
-                <span>Vào Xưởng Atelier 3D</span>
-                <ArrowRight className="w-4 h-4" />
-              </a>
-
-              <a
-                href="#/ai-studio"
-                onClick={(e) => { e.preventDefault(); onNavigate('ai-studio'); }}
-                className="px-6 py-3 rounded-m3-full bg-cyber-lime hover:bg-lime-400 text-black font-bold text-xs sm:text-sm font-mono transition-all shadow-cyber-glow hover:scale-105 flex items-center gap-2 cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4 fill-black" />
-                <span>Phòng Sáng Tạo AI</span>
-              </a>
-
-              <a
-                href="#/rules"
-                onClick={(e) => { e.preventDefault(); onNavigate('rules'); }}
-                className="px-5 py-3 rounded-m3-full bg-white/5 hover:bg-white/10 text-neutral-200 border border-white/15 text-xs sm:text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                <BookOpen className="w-4 h-4 text-heritage-hoang" />
-                <span>Điển Lệ Cổ Phục</span>
-              </a>
-            </div>
-
-            {/* Scroll Down Prompt */}
-            <div
-              onClick={() => scrollToPhase(0.05)}
-              className="pt-4 inline-flex items-center gap-3 text-xs sm:text-sm font-mono text-neutral-400 hover:text-amber-200 cursor-pointer transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full border border-heritage-hoang/40 flex items-center justify-center bg-heritage-hoang/10">
-                <ChevronDown className="w-4 h-4 text-heritage-hoang animate-bounce" />
-              </div>
-              <span>Cuộn xuống để bước vào Sân Khấu Scrollytelling 100% Toàn Màn Hình</span>
-            </div>
+      {/* ==================================================================== */}
+      {/* 1. HERO SECTION: GIỚI THIỆU TỔNG QUAN VIBEPHỤC STUDIO (LIGHT THEME)  */}
+      {/* ==================================================================== */}
+      <section className="relative z-10 pt-10 pb-16 px-4 max-w-7xl mx-auto flex flex-col items-center text-center space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-4 max-w-4xl mx-auto"
+        >
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-amber-900 text-xs font-mono font-bold uppercase tracking-wider shadow-sm">
+            <Crown className="w-3.5 h-3.5 text-amber-700" />
+            <span>Nền Tảng Thời Trang Di Sản Việt Nam · Kỷ Nguyên Số</span>
           </div>
 
-          {/* Right Visual Art Asset (5 cols) */}
-          <div className="lg:col-span-5 relative h-80 sm:h-96 lg:h-[420px] flex items-center justify-center p-2 rounded-m3-xl bg-obsidian-800/60 border border-white/10 shadow-2xl overflow-hidden">
-            <HeroHeritageIllustration className="w-full h-full max-h-[400px] drop-shadow-2xl" />
-          </div>
+          {/* Main Title */}
+          <h1 className="font-imperial text-4xl sm:text-6xl md:text-7xl font-black text-neutral-900 tracking-tight leading-tight">
+            Tôn Vinh Cổ Phục Việt <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-700 via-amber-600 to-yellow-600">
+              Trong Nhịp Sống Đương Đại
+            </span>
+          </h1>
 
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 4. TRUE 100% FULL-SCREEN SCROLL-DRIVEN PRESENTATION STAGE (420vh) */}
-      {/* ========================================================================= */}
-      <section ref={scrollySectionRef} className="relative h-[420vh] w-full">
-        
-        {/* Sticky 100vh Full-Screen Stage Canvas (Edge-to-Edge 100vw x 100vh) */}
-        <div className="sticky top-0 h-screen w-full overflow-hidden bg-obsidian-900 flex flex-col justify-between z-20">
-          
-          {/* Dynamic Background Atmosphere Glow shifting across acts */}
-          <div
-            className={`absolute inset-0 transition-opacity duration-1000 pointer-events-none ${
-              currentChapter === 0
-                ? 'bg-[radial-gradient(ellipse_at_top,#14223D_0%,#0E0F12_70%)]'
-                : currentChapter === 1
-                ? 'bg-[radial-gradient(ellipse_at_top,#40141A_0%,#0E0F12_70%)]'
-                : 'bg-[radial-gradient(ellipse_at_top,#0E2E18_0%,#0E0F12_70%)]'
-            }`}
-          />
-
-          {/* BLACKOUT ECLIPSE TRANSITION OVERLAYS BETWEEN ACTS ("Đen màn hình rồi animation hiện lên") */}
-          <motion.div
-            className="absolute inset-0 bg-black z-40 pointer-events-none"
-            style={{ opacity: eclipse1To2 }}
-          />
-          <motion.div
-            className="absolute inset-0 bg-black z-40 pointer-events-none"
-            style={{ opacity: eclipse2To3 }}
-          />
-
-          {/* TOP PRESENTATION HUD BAR */}
-          <div className="relative z-30 w-full px-6 sm:px-12 pt-5 flex items-center justify-between border-b border-white/10 bg-obsidian-900/70 backdrop-blur-organza pb-3.5">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-heritage-hoang animate-ping" />
-              <div>
-                <span className="text-xs font-mono uppercase tracking-widest text-heritage-hoang font-bold block">
-                  DEBUT PRESENTATION • 100% FULL SCREEN
-                </span>
-                <span className="text-[11px] text-neutral-400 font-sans hidden sm:block">
-                  {isAutoPlaying ? '▶ Đang tự động trình chiếu di sản...' : 'Tự do cuộn hoặc điều khiển bằng thanh điều hướng'}
-                </span>
-              </div>
-            </div>
-
-            {/* Playback Controls & Chapter Stepper */}
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <button
-                onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-                className={`px-3.5 py-1.5 rounded-m3-full flex items-center gap-1.5 font-bold transition-all cursor-pointer ${
-                  isAutoPlaying
-                    ? 'bg-heritage-hoang text-black shadow-heritage-glow'
-                    : 'bg-white/10 hover:bg-white/20 text-white'
-                }`}
-                title={isAutoPlaying ? 'Tạm dừng tự động cuộn' : 'Bật tự động trình chiếu (Auto-Scroll)'}
-              >
-                {isAutoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                <span>{isAutoPlaying ? 'Tạm Dừng' : 'Auto Play'}</span>
-              </button>
-
-              <button
-                onClick={() => scrollToPhase(currentChapter === 0 ? 0.48 : currentChapter === 1 ? 0.85 : 0.05)}
-                className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-m3-full bg-white/10 hover:bg-white/20 text-neutral-200 cursor-pointer"
-                title="Chuyển đến Hồi kế tiếp"
-              >
-                <span>Next Act</span>
-                <SkipForward className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                onClick={toggleFullscreen}
-                className="p-2 rounded-full text-neutral-400 hover:text-white transition-colors cursor-pointer hidden md:block"
-                title="Bật/Tắt chế độ Toàn Màn Hình"
-              >
-                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* MAIN PRESENTATION STAGE (SPANS 85-90% OF VIEWPORT HEIGHT) */}
-          <div className="relative z-20 flex-1 max-w-7xl w-full mx-auto px-6 sm:px-12 flex flex-col lg:flex-row items-center justify-between gap-8 my-auto">
-            
-            {/* LEFT / TOP: DYNAMIC EDITORIAL STORYTELLING TEXT */}
-            <div className="w-full lg:w-5/12 space-y-6">
-              <AnimatePresence mode="wait">
-                {currentChapter === 0 && (
-                  <motion.div
-                    key="act-0"
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.45 }}
-                    className="space-y-4"
-                  >
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-heritage-hoang/10 border border-heritage-hoang/40 text-xs font-mono font-bold text-amber-200 uppercase tracking-widest">
-                      HỒI THỨ NHẤT: KHỞI THI CÔNG
-                    </div>
-
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-imperial font-bold text-white leading-tight">
-                      Sống Lưng Chính Trung <br />
-                      <span className="text-heritage-hoang font-imperial">Đoan Chính Giữa Trời Đất</span>
-                    </h2>
-
-                    <p className="text-sm sm:text-base text-neutral-300 leading-relaxed font-sans">
-                      Khi chế tác chiếc áo ngũ thân, người thợ may nối ghép hai khổ vải phía sau lưng thành một đường ráp nối duy nhất gọi là <strong>Đường May Chính Trung (正中)</strong>.
-                      Đường chỉ vàng này chạy thẳng tắp dọc cột sống, nhắc nhở người mặc luôn giữ lòng dạ ngay thẳng, cương trực, không tà tâm trước đất trời.
-                    </p>
-
-                    <div className="p-4 rounded-m3-lg bg-obsidian-800/90 border border-white/15 text-xs sm:text-sm text-neutral-300 space-y-2">
-                      <div className="flex items-center gap-2 text-heritage-hoang font-bold">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Quy Thức Bất Biến Triều Nguyễn</span>
-                      </div>
-                      <p className="text-xs text-neutral-400 font-sans">
-                        Thân sau áo ngũ thân bắt buộc ráp đôi song song, tuyệt đối không dùng vải liền khổ lớn để giữ trọn triết lý cân bằng Âm Dương.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentChapter === 1 && (
-                  <motion.div
-                    key="act-1"
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.45 }}
-                    className="space-y-4"
-                  >
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-rose-950/80 border border-rose-600/50 text-xs font-mono font-bold text-rose-300 uppercase tracking-widest">
-                      HỒI THỨ HAI: RANH GIỚI SINH TỬ
-                    </div>
-
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-imperial font-bold text-white leading-tight">
-                      Quy Thức Hữu Nhậm <br />
-                      <span className="text-amber-300 font-imperial">& 5 Cúc Ngũ Luân</span>
-                    </h2>
-
-                    <p className="text-sm sm:text-base text-neutral-300 leading-relaxed font-sans">
-                      Vạt áo cổ phục Việt Nam bắt buộc khép từ <strong>Trái sang Phải</strong> (Hữu Nhậm - 右衽), cài khuy tại lườn nách phải.
-                      Cài ngược lại từ Phải sang Trái (Tả Nhậm) là <strong className="text-rose-400">ĐẠI KỴ</strong> vì đây là quy thức xưa nay chỉ dành để khâm liệm thi hài người mất.
-                    </p>
-
-                    {/* 5 Virtues Grid */}
-                    <div className="space-y-2 pt-2">
-                      <div className="text-xs font-mono text-neutral-400 font-semibold uppercase">
-                        5 Khuy Cúc Tượng Trưng 5 Đạo Làm Người:
-                      </div>
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {FIVE_VIRTUES.map((v) => (
-                          <div key={v.name} className="p-2 rounded bg-obsidian-800 border border-white/10 text-center">
-                            <div className="text-sm font-bold text-heritage-hoang font-imperial">{v.symbol}</div>
-                            <div className="text-xs font-bold text-white mt-0.5">{v.name}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentChapter === 2 && (
-                  <motion.div
-                    key="act-2"
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.45 }}
-                    className="space-y-4"
-                  >
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-cyber-lime/10 border border-cyber-lime/40 text-xs font-mono font-bold text-cyber-lime uppercase tracking-widest">
-                      HỒI THỨ BA: TƯƠNG LAI HAUTE HERITAGE
-                    </div>
-
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-imperial font-bold text-white leading-tight">
-                      Hơi Thở Gen Z Streetwear <br />
-                      <span className="text-cyber-lime font-imperial">Dung Hợp Công Nghệ Vị Lai</span>
-                    </h2>
-
-                    <p className="text-sm sm:text-base text-neutral-300 leading-relaxed font-sans">
-                      Di sản không phải là hiện vật bảo tàng ngủ yên. Khi kết hợp lớp áo ngũ thân truyền thống cùng áo bomber cyber organza, quần parachute cargo và chunky boots, cổ phục hòa nhập sống động vào đời sống thế hệ trẻ.
-                    </p>
-
-                    {/* Fast Portal Jump Buttons */}
-                    <div className="flex flex-wrap items-center gap-3 pt-3">
-                      <a
-                        href="#/atelier"
-                        onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-                        className="px-6 py-2.5 rounded-m3-full bg-cyber-lime hover:bg-lime-400 text-black font-bold text-xs sm:text-sm font-mono transition-all shadow-cyber-glow flex items-center gap-2 cursor-pointer"
-                      >
-                        <Layers className="w-4 h-4" />
-                        <span>Mở Xưởng Atelier 3D</span>
-                      </a>
-
-                      <a
-                        href="#/ai-studio"
-                        onClick={(e) => { e.preventDefault(); onNavigate('ai-studio'); }}
-                        className="px-5 py-2.5 rounded-m3-full bg-white/10 hover:bg-white/20 text-white font-medium text-xs sm:text-sm font-mono transition-colors flex items-center gap-2 cursor-pointer border border-white/20"
-                      >
-                        <Sparkles className="w-4 h-4 text-cyber-lime" />
-                        <span>Thử Gemini AI Remix</span>
-                      </a>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* RIGHT / CENTER: MASSIVE CINEMATIC VISUAL STAGE (SPANS 80-90% SCREEN HEIGHT) */}
-            <div className="w-full lg:w-7/12 flex items-center justify-center p-2 sm:p-4">
-              <div className="relative w-full max-w-lg h-[460px] sm:h-[530px] rounded-m3-xl bg-obsidian-900/90 border border-heritage-hoang/40 p-6 flex flex-col items-center justify-center shadow-2xl overflow-hidden backdrop-blur-organza">
-                
-                {/* Radial Aura Glow */}
-                <div className="absolute inset-0 bg-radial from-heritage-hoang/10 via-transparent to-transparent opacity-60 pointer-events-none" />
-
-                {/* THE PHYSICAL GARMENT SIMULATION CANVAS */}
-                <div className="relative w-72 sm:w-80 h-96 sm:h-[430px] flex items-center justify-center">
-                  
-                  {/* ACT 1 VISUALS: BACK PANELS & CHÍNH TRUNG SEAM */}
-                  {currentChapter === 0 && (
-                    <motion.div
-                      className="absolute inset-0 flex items-center justify-center"
-                      style={{ opacity: chap1Opacity }}
-                    >
-                      {/* Left Back Panel of Áo Ngũ Thân */}
-                      <motion.div
-                        className="absolute left-4 top-8 bottom-8 w-32 bg-gradient-to-r from-[#0C1E3A] to-[#1E3A8A] border-y border-l border-heritage-hoang/40 rounded-l-lg shadow-xl"
-                        style={{ x: negativePanelSpread }}
-                      >
-                        <div className="p-3 text-[10px] font-mono text-neutral-400">Thân sau bên trái</div>
-                      </motion.div>
-
-                      {/* Right Back Panel of Áo Ngũ Thân */}
-                      <motion.div
-                        className="absolute right-4 top-8 bottom-8 w-32 bg-gradient-to-l from-[#0C1E3A] to-[#1E3A8A] border-y border-r border-heritage-hoang/40 rounded-r-lg shadow-xl"
-                        style={{ x: panelSpread }}
-                      >
-                        <div className="p-3 text-[10px] font-mono text-neutral-400 text-right">Thân sau bên phải</div>
-                      </motion.div>
-
-                      {/* High Collar (Lập Lĩnh) Center */}
-                      <div className="absolute top-2 w-28 h-10 rounded-t-md bg-[#0F172A] border-2 border-heritage-hoang z-30 flex items-center justify-center shadow-lg">
-                        <span className="text-[11px] font-mono font-bold text-amber-200">Cổ Lập Lĩnh</span>
-                      </div>
-
-                      {/* THE GOLDEN SEAM LINE (CHÍNH TRUNG) PIERCING VERTICALLY */}
-                      <motion.div
-                        className="absolute inset-y-8 left-1/2 -translate-x-1/2 w-1.5 bg-gradient-to-b from-amber-100 via-heritage-hoang to-amber-400 shadow-heritage-glow z-20"
-                        style={{
-                          height: seamHeight,
-                          opacity: seamGlow,
-                        }}
-                      />
-
-                      {/* Floating Seam Tag */}
-                      <motion.div
-                        className="absolute top-1/2 -translate-y-1/2 z-30 bg-black/90 px-3 py-1.5 rounded-m3-full border border-heritage-hoang/60 shadow-heritage-glow text-center"
-                        style={{ opacity: seamGlow }}
-                      >
-                        <span className="text-xs font-mono font-bold text-heritage-hoang">
-                          Đường May Chính Trung (正中)
-                        </span>
-                      </motion.div>
-                    </motion.div>
-                  )}
-
-                  {/* ACT 2 VISUALS: LAPEL CLOSURE (HỮU NHẬM) & 5 BUTTONS IGNITING */}
-                  {currentChapter === 1 && (
-                    <motion.div
-                      className="absolute inset-0 flex items-center justify-center"
-                      style={{ opacity: chap2Opacity }}
-                    >
-                      {/* Under-Lapel (Tiền thiềm bên phải) */}
-                      <div className="absolute inset-x-8 top-10 bottom-10 bg-gradient-to-br from-indigo-950 to-blue-950 border border-white/20 rounded-lg p-4 flex flex-col justify-end">
-                        <span className="text-[10px] font-mono text-neutral-400">Tiền thiềm lót bên phải</span>
-                      </div>
-
-                      {/* OVER-LAPEL (VẠT TRÁI ĐÈ VẠT PHẢI - HỮU NHẬM) WITH 3D SWOOP */}
-                      <motion.div
-                        className="absolute inset-x-6 top-8 bottom-8 bg-gradient-to-tr from-[#1E3A8A] via-[#1E293B] to-[#1E3A8A] border-2 border-amber-300 rounded-lg shadow-2xl p-4 flex flex-col justify-between z-20"
-                        style={{
-                          x: flapSwoopX,
-                          rotateY: flapRotateY,
-                        }}
-                      >
-                        <div className="flex items-center justify-between text-xs font-mono text-amber-200 border-b border-amber-400/30 pb-2">
-                          <span className="font-bold flex items-center gap-1 text-emerald-400">
-                            <Check className="w-4 h-4" />
-                            HỮU NHẬM (右衽)
-                          </span>
-                          <span className="text-[10px] text-neutral-300">Vạt Trái Phủ Lên Vạt Phải</span>
-                        </div>
-
-                        {/* 5 GOLDEN BUTTONS (NGŨ LUÂN) LIGHTING UP DOWN THE RIGHT SIDE */}
-                        <div className="space-y-4 my-auto pl-2">
-                          {[
-                            { virtue: 'Nhân', symbol: '仁', op: btn1, meaning: 'Lòng Nhân Ái' },
-                            { virtue: 'Lễ', symbol: '禮', op: btn2, meaning: 'Kính Trọng Lễ Nghi' },
-                            { virtue: 'Nghĩa', symbol: '義', op: btn3, meaning: 'Chính Trực Lẽ Phải' },
-                            { virtue: 'Trí', symbol: '智', op: btn4, meaning: 'Sáng Suốt Minh Triết' },
-                            { virtue: 'Tín', symbol: '信', meaning: 'Chữ Tín Son Sắt' },
-                          ].map((b) => (
-                            <motion.div
-                              key={b.virtue}
-                              className="flex items-center gap-3"
-                              style={{ opacity: b.op }}
-                            >
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-heritage-hoang via-amber-200 to-amber-400 text-black font-imperial font-bold text-xs flex items-center justify-center shadow-heritage-glow border border-amber-100">
-                                {b.symbol}
-                              </div>
-                              <div className="text-xs font-mono text-amber-100">
-                                <strong className="text-white">{b.virtue}</strong>: {b.meaning}
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-
-                        {/* Taboo Warning Banner */}
-                        <div className="bg-rose-950/90 border border-rose-600 p-2 rounded text-[11px] font-mono text-rose-200 text-center flex items-center justify-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                          <span>Tuyệt đối cấm Tả Nhậm (Vạt phải đè vạt trái)</span>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  )}
-
-                  {/* ACT 3 VISUALS: CYBER STREETWEAR FUSION & HIS METER GAUGE */}
-                  {currentChapter === 2 && (
-                    <motion.div
-                      className="absolute inset-0 flex items-center justify-center"
-                      style={{ opacity: chap3Opacity }}
-                    >
-                      {/* Traditional Core Silhouette underneath */}
-                      <div className="w-48 h-72 rounded-lg bg-gradient-to-b from-indigo-900 to-blue-950 border border-amber-300/40 p-4 relative overflow-hidden shadow-inner">
-                        <div className="w-full text-center text-xs font-mono text-amber-200">
-                          Áo Ngũ Thân Cổ Phục Lõi
-                        </div>
-                      </div>
-
-                      {/* TRANSFORMATION: CYBER ORGANZA TRENCH & PARACHUTE TECH WEAR */}
-                      <motion.div
-                        className="absolute inset-0 rounded-m3-xl bg-cyber-lime/10 border-2 border-cyber-lime/70 backdrop-blur-[3px] p-6 flex flex-col justify-between shadow-cyber-glow z-30"
-                        style={{
-                          opacity: cyberOverlayOpacity,
-                          scale: cyberScale,
-                        }}
-                      >
-                        <div className="flex items-center justify-between text-xs font-mono text-cyber-lime font-bold">
-                          <span>CYBER ORGANZA TRENCH</span>
-                          <span>HAUTE STREETWEAR</span>
-                        </div>
-
-                        {/* Middle Silhouettes Details */}
-                        <div className="space-y-2 text-center my-auto">
-                          <div className="text-sm font-bold text-white">Cyber Trenchcoat Xuyên Thấu</div>
-                          <div className="text-xs text-neutral-300">Khóa kim loại Tactical Buckle & Quần Cargo</div>
-                          <div className="text-xs font-mono text-cyber-lime">Chunky Boots Hợp Kim Titan</div>
-                        </div>
-
-                        {/* HIS METER GAUGE */}
-                        <div className="bg-black/90 p-3 rounded-m3-md border border-cyber-lime/40 space-y-2">
-                          <div className="flex items-center justify-between text-xs font-mono">
-                            <span className="text-neutral-400">Heritage Integrity Score:</span>
-                            <span className="text-cyber-lime font-bold text-sm">98% (Chuẩn Mực)</span>
-                          </div>
-
-                          {/* Progress Meter Bar */}
-                          <div className="w-full h-2 rounded-full bg-neutral-800 overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-heritage-hoang via-cyber-lime to-cyber-jade rounded-full w-[98%]" />
-                          </div>
-
-                          <div className="text-[10px] font-mono text-center text-emerald-400">
-                            ✓ Bảo chứng Quy Thức Hữu Nhậm & Triết Lý Ngũ Luân
-                          </div>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  )}
-
-                </div>
-
-                {/* BOTTOM STAGE CAPTION */}
-                <div className="mt-4 text-xs font-mono text-neutral-400 text-center z-20">
-                  {currentChapter === 0 && 'Sống lưng ghép đôi — Nhắc nhở người mặc luôn đoan chính giữa đất trời'}
-                  {currentChapter === 1 && 'Vạt áo Hữu Nhậm cài nách phải — 5 khuy cúc tượng trưng Nhân Lễ Nghĩa Trí Tín'}
-                  {currentChapter === 2 && 'Gen Z Haute Heritage — Đưa cổ phục bước xuống đường phố đương đại'}
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-
-          {/* BOTTOM HUD BAR & CHAPTER STEPPER */}
-          <div className="relative z-30 w-full px-6 sm:px-12 pb-5 pt-3 border-t border-white/10 bg-obsidian-900/70 backdrop-blur-organza flex items-center justify-between text-xs font-mono">
-            <div className="text-neutral-400">
-              Tiến trình Scrollytelling:{' '}
-              <span className="text-heritage-hoang font-bold">
-                {currentChapter === 0 ? '33% (Hồi I)' : currentChapter === 1 ? '66% (Hồi II)' : '100% (Hồi III Hoàn Tất)'}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-neutral-400 hidden sm:inline">
-                Cuộn tiếp để vào Cổng Kết Nối Không Gian
-              </span>
-              <button
-                onClick={() => scrollToPhase(currentChapter === 0 ? 0.48 : currentChapter === 1 ? 0.85 : 0.05)}
-                className="px-4 py-1.5 rounded-m3-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                <span>{currentChapter < 2 ? 'Xem Hồi Tiếp Theo' : 'Về Đầu Scrolly'}</span>
-                <ChevronDown className={`w-3.5 h-3.5 ${currentChapter === 2 ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 5. APP PORTAL GATEWAY HUBS (RELATIVE LINKS DIRECTLY TO ALL ROUTES) */}
-      {/* ========================================================================= */}
-      <section className="relative w-full max-w-7xl mx-auto px-6 sm:px-12 py-20 space-y-8 z-30">
-        <div>
-          <div className="text-xs font-mono uppercase tracking-widest text-heritage-hoang flex items-center gap-1.5">
-            <Compass className="w-4 h-4" />
-            <span>CỔNG KẾT NỐI KHÔNG GIAN (APP PORTAL HUBS)</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-bold font-imperial text-white mt-1">
-            Chọn Điểm Đến Trong VibePhục Studio
-          </h2>
-          <p className="text-sm text-neutral-400 font-sans">
-            Mỗi không gian phục vụ một mục đích chuyên biệt. Truy cập ngay bằng các liên kết tương đối (relative-links) dưới đây:
+          {/* Subtitle / Intro */}
+          <p className="text-sm sm:text-lg text-neutral-600 leading-relaxed max-w-3xl mx-auto">
+            <strong>VibePhục Studio</strong> là không gian số hóa và giám tuyển phục sức truyền thống Việt Nam: Kết nối tơ lụa trăm năm với thời trang đương đại thông qua Xưởng phối đồ 2D tương tác, Văn thư Wiki bách khoa chuẩn sử liệu, và Trí tuệ nhân tạo cố vấn phong cách.
           </p>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          
-          {/* PORTAL 1: MODULAR ATELIER 3D */}
-          <a
-            href="#/atelier"
-            onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-            className="group block p-6 rounded-m3-xl bg-obsidian-800/90 border border-white/10 hover:border-heritage-hoang hover:bg-obsidian-800 transition-all duration-300 shadow-xl relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5"
-          >
-            <div className="space-y-4">
-              <div className="w-14 h-14 rounded-m3-md bg-heritage-hoang/20 text-heritage-hoang border border-heritage-hoang/40 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
-                <Layers className="w-7 h-7" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold font-imperial text-white group-hover:text-heritage-hoang transition-colors">
-                  Xưởng Atelier 3D
-                </h3>
-                <span className="text-xs font-mono text-neutral-400 block mt-1">
-                  Đường dẫn: #/atelier
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Thử nghiệm phối đồ đa tầng thời gian thực (Base, Core, Outer, Bottom, Phụ kiện). Trải nghiệm cơ chế vật lý nảy đàn hồi chống Tả Nhậm.
-              </p>
+          {/* CTA Buttons Group */}
+          <div className="flex flex-wrap items-center justify-center gap-3.5 pt-4">
+            <button
+              onClick={() => onNavigate('atelier')}
+              className="px-8 py-3.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-imperial font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-amber-200" />
+              <span>Bắt Đầu Phối Đồ Ngay</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => onNavigate('wiki')}
+              className="px-6 py-3.5 rounded-full bg-white hover:bg-amber-50/60 text-stone-800 font-mono font-bold text-xs flex items-center gap-2 transition-all border border-stone-300 hover:border-amber-400 shadow-sm cursor-pointer"
+            >
+              <BookOpen className="w-4 h-4 text-amber-700" />
+              <span>Tra Cứu Wiki Cổ Phục</span>
+            </button>
+          </div>
+
+          {/* Key Metrics Banner */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 max-w-3xl mx-auto text-xs font-mono">
+            <div className="p-3.5 rounded-xl bg-white border border-stone-200 shadow-sm text-center">
+              <span className="text-amber-700 font-bold text-lg block">7 Thời Kỳ</span>
+              <span className="text-stone-500 text-[11px]">Tiến trình y phục lịch sử</span>
             </div>
-
-            <div className="pt-5 border-t border-white/10 flex items-center justify-between text-xs font-mono text-heritage-hoang font-bold">
-              <span>Mở Xưởng Phục Trang</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+            <div className="p-3.5 rounded-xl bg-white border border-stone-200 shadow-sm text-center">
+              <span className="text-emerald-700 font-bold text-lg block">Chuẩn Điển Chế</span>
+              <span className="text-stone-500 text-[11px]">Sử sách triều Nguyễn & Lý Trần</span>
             </div>
-          </a>
-
-          {/* PORTAL 2: GEMINI AI REMIX STUDIO */}
-          <a
-            href="#/ai-studio"
-            onClick={(e) => { e.preventDefault(); onNavigate('ai-studio'); }}
-            className="group block p-6 rounded-m3-xl bg-obsidian-800/90 border border-white/10 hover:border-cyber-lime hover:bg-obsidian-800 transition-all duration-300 shadow-xl relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5"
-          >
-            <div className="space-y-4">
-              <div className="w-14 h-14 rounded-m3-md bg-cyber-lime/20 text-cyber-lime border border-cyber-lime/40 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
-                <Sparkles className="w-7 h-7" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold font-imperial text-white group-hover:text-cyber-lime transition-colors">
-                  Gemini AI Studio
-                </h3>
-                <span className="text-xs font-mono text-neutral-400 block mt-1">
-                  Đường dẫn: #/ai-studio
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Khởi tạo bản phối thông minh với Adaptive Multi-Model Routing (Gemini 3.8 Flash & 3.1 Pro), tự động cân bằng ngũ hành và xử lý lỗi mạng Case 492.
-              </p>
+            <div className="p-3.5 rounded-xl bg-white border border-stone-200 shadow-sm text-center">
+              <span className="text-blue-700 font-bold text-lg block">6 Lớp Phối Đồ</span>
+              <span className="text-stone-500 text-[11px]">Bóc tách trang phục trực quan</span>
             </div>
-
-            <div className="pt-5 border-t border-white/10 flex items-center justify-between text-xs font-mono text-cyber-lime font-bold">
-              <span>Khởi Tạo Bằng AI</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+            <div className="p-3.5 rounded-xl bg-white border border-stone-200 shadow-sm text-center">
+              <span className="text-purple-700 font-bold text-lg block">Chuẩn 9:16</span>
+              <span className="text-stone-500 text-[11px]">Thẻ Heritage Passport Story</span>
             </div>
-          </a>
-
-          {/* PORTAL 3: HERITAGE RULES ARCHIVE */}
-          <a
-            href="#/rules"
-            onClick={(e) => { e.preventDefault(); onNavigate('rules'); }}
-            className="group block p-6 rounded-m3-xl bg-obsidian-800/90 border border-white/10 hover:border-heritage-son hover:bg-obsidian-800 transition-all duration-300 shadow-xl relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5"
-          >
-            <div className="space-y-4">
-              <div className="w-14 h-14 rounded-m3-md bg-heritage-son/20 text-rose-300 border border-heritage-son/40 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
-                <BookOpen className="w-7 h-7" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold font-imperial text-white group-hover:text-rose-200 transition-colors">
-                  Điển Lệ Cổ Phục
-                </h3>
-                <span className="text-xs font-mono text-neutral-400 block mt-1">
-                  Đường dẫn: #/rules
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Bách khoa điển lệ phục sức: Áo Ngũ Thân, Áo Tấc, Nhật Bình, Tứ Thân, Bà Ba, luật Hữu Nhậm và sumptuary laws cấm ngụy tạo rồng 5 móng phong kiến.
-              </p>
-            </div>
-
-            <div className="pt-5 border-t border-white/10 flex items-center justify-between text-xs font-mono text-rose-300 font-bold">
-              <span>Tra Cứu Điển Lệ</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
-            </div>
-          </a>
-
-          {/* PORTAL 4: LOOKBOOK ARCHIVE */}
-          <a
-            href="#/lookbooks"
-            onClick={(e) => { e.preventDefault(); onNavigate('lookbooks'); }}
-            className="group block p-6 rounded-m3-xl bg-obsidian-800/90 border border-white/10 hover:border-amber-300 hover:bg-obsidian-800 transition-all duration-300 shadow-xl relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5"
-          >
-            <div className="space-y-4">
-              <div className="w-14 h-14 rounded-m3-md bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
-                <BookmarkCheck className="w-7 h-7" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold font-imperial text-white group-hover:text-amber-200 transition-colors">
-                  Kho Lookbook
-                </h3>
-                <span className="text-xs font-mono text-neutral-400 block mt-1">
-                  Đường dẫn: #/lookbooks
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Lưu trữ các bản phối đã được giám tuyển và bảo chứng quy thức trên nền tảng cơ sở dữ liệu Google Cloud Firestore lâu dài.
-              </p>
-            </div>
-
-            <div className="pt-5 border-t border-white/10 flex items-center justify-between text-xs font-mono text-amber-300 font-bold">
-              <span>Xem Bộ Sưu Tập</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
-            </div>
-          </a>
-
-        </div>
+          </div>
+        </motion.div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* 6. VISUAL CULTURAL PRINCIPLES ASSETS */}
-      {/* ========================================================================= */}
-      <section className="relative w-full max-w-7xl mx-auto px-6 sm:px-12 py-10 space-y-8 z-30">
-        <div>
-          <div className="text-xs font-mono uppercase tracking-widest text-heritage-hoang flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4" />
-            <span>NGUYÊN LÝ VĂN HÓA CỐT LÕI (CULTURAL PRINCIPLES)</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-bold font-imperial text-white mt-1">
-            Quy Thức Hữu Nhậm & Triết Lý Ngũ Hành
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          
-          {/* Left: Huu Nham vs Ta Nham Comparison Asset */}
-          <div className="lg:col-span-7 bg-obsidian-800/80 rounded-m3-xl border border-white/10 p-6 sm:p-8 backdrop-blur-organza shadow-xl flex flex-col justify-between space-y-6">
+      {/* ==================================================================== */}
+      {/* 2. MẪU CỔ PHỤC TIÊU BIỂU VỚI ẢNH CHUẨN XÁC WIKIMEDIA COMMONS         */}
+      {/* ==================================================================== */}
+      <section className="relative z-10 py-12 px-4 max-w-6xl mx-auto border-t border-stone-200">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.5 }}
+          className="space-y-8"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-stone-200 pb-4">
             <div>
-              <span className="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">
-                CHẨN ĐOÁN QUY THỨC MAY MẶC
+              <span className="text-xs font-mono uppercase text-amber-700 font-bold tracking-widest block">
+                Kho Tàng Di Sản Phục Sức
               </span>
-              <h3 className="text-2xl font-bold font-imperial text-white mt-1">
-                Phân Định Rạch Ròi: Hữu Nhậm (右衽) vs Tả Nhậm (左衽)
-              </h3>
-              <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed font-sans">
-                Người xưa quan niệm vạt áo bên trái tượng trưng cho phần Dương (Sự sống, sinh trưởng), vạt bên phải tượng trưng cho phần Âm. Khi cài áo, vạt trái đè lên vạt phải (Hữu Nhậm) là thuận theo lẽ tự nhiên của người sống. Cài ngược lại (Tả Nhậm) là nghịch lý sinh tồn, đại kỵ trong đời sống thường nhật.
-              </p>
+              <h2 className="font-imperial text-2xl sm:text-3xl font-bold text-stone-900 mt-1">
+                Các Mẫu Cổ Phục Chuẩn Mực Điển Chế
+              </h2>
             </div>
-
-            <div className="w-full h-72 rounded-m3-lg overflow-hidden flex items-center justify-center p-2 bg-obsidian-900 border border-white/5">
-              <HuuNhamComparisonAsset className="w-full h-full max-h-64" />
-            </div>
+            <button
+              onClick={() => onNavigate('wiki')}
+              className="text-xs font-mono text-amber-700 hover:text-amber-800 font-bold flex items-center gap-1 cursor-pointer"
+            >
+              <span>Xem Dòng Thời Gian & Điển Chế Chi Tiết</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          {/* Right: Five Elements Wheel Asset */}
-          <div className="lg:col-span-5 bg-obsidian-800/80 rounded-m3-xl border border-white/10 p-6 sm:p-8 backdrop-blur-organza shadow-xl flex flex-col justify-between space-y-6">
-            <div>
-              <span className="text-xs font-mono text-heritage-hoang font-bold uppercase tracking-wider">
-                TRIẾT LÝ SẮC ĐIỂN
-              </span>
-              <h3 className="text-2xl font-bold font-imperial text-white mt-1">
-                Vòng Tương Sinh Ngũ Hành
-              </h3>
-              <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed font-sans">
-                Màu sắc trong phục sức Cổ phục Việt Nam không phối ngẫu tùy tiện mà tuân theo nguyên lý Ngũ Hành: Kim (Trắng), Mộc (Xanh lá), Thủy (Chàm/Đen), Hỏa (Đỏ), Thổ (Vàng Hoàng Thổ).
-              </p>
-            </div>
-
-            <div className="w-full h-72 rounded-m3-lg overflow-hidden flex items-center justify-center p-2 bg-obsidian-900 border border-white/5">
-              <FiveElementsWheelAsset className="w-full h-full max-h-64" />
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 7. VISUAL BENTO GALLERY OF 5 CORE GARMENTS */}
-      {/* ========================================================================= */}
-      <section className="relative w-full max-w-7xl mx-auto px-6 sm:px-12 py-10 space-y-8 z-30">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="text-xs font-mono uppercase tracking-widest text-heritage-hoang flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" />
-              <span>BỘ NGŨ PHỤC DI SẢN (HERITAGE SHOWCASE)</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold font-imperial text-white mt-1">
-              5 Dòng Cổ Phục & Biểu Tượng Văn Hóa
-            </h2>
-          </div>
-
-          <a
-            href="#/atelier"
-            onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-            className="text-xs sm:text-sm font-mono text-heritage-hoang hover:underline flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>Thử phối các trang phục này tại Xưởng Atelier</span>
-            <ArrowRight className="w-4 h-4" />
-          </a>
-        </div>
-
-        {/* 5 Garments Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {/* Card 1: Áo Ngũ Thân Tay Chẽn */}
-          <div className="bg-obsidian-800/80 rounded-m3-xl border border-white/10 p-6 backdrop-blur-organza space-y-4 hover:border-heritage-hoang transition-all duration-300 group flex flex-col justify-between">
-            <div className="w-full h-64 rounded-m3-lg bg-obsidian-900 overflow-hidden flex items-center justify-center p-2 border border-white/5 group-hover:scale-[1.02] transition-transform">
-              <NguThanArtwork className="w-full h-full max-h-56 drop-shadow-md" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold font-imperial text-white group-hover:text-heritage-hoang transition-colors">
-                  Áo Ngũ Thân Tay Chẽn
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-heritage-hoang/20 text-amber-200">
-                  Triều Nguyễn
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Phom dáng 5 thân tượng trưng tứ thân phụ mẫu và chính mình. Cổ đứng lập lĩnh cao 2-3cm, 5 cúc cài nách phải theo đúng quy thức Hữu Nhậm.
-              </p>
-              <div className="pt-2 flex items-center justify-between text-xs font-mono">
-                <a
-                  href="#/atelier"
-                  onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-                  className="text-amber-300 hover:underline flex items-center gap-1"
-                >
-                  <span>Phối đồ ngay</span>
-                  <ArrowRight className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Áo Nhật Bình Cung Đình */}
-          <div className="bg-obsidian-800/80 rounded-m3-xl border border-white/10 p-6 backdrop-blur-organza space-y-4 hover:border-heritage-son transition-all duration-300 group flex flex-col justify-between">
-            <div className="w-full h-64 rounded-m3-lg bg-obsidian-900 overflow-hidden flex items-center justify-center p-2 border border-white/5 group-hover:scale-[1.02] transition-transform">
-              <NhatBinhArtwork className="w-full h-full max-h-56 drop-shadow-md" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold font-imperial text-white group-hover:text-rose-200 transition-colors">
-                  Áo Nhật Bình Cung Đình
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-heritage-son/20 text-rose-200">
-                  Hoàng Tộc
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Lễ phục của Hoàng hậu, Công chúa triều Nguyễn. Điểm nhấn là cổ áo hình chữ nhật to bản và dải ngũ sắc viền cửa tay áo đại diện cho Ngũ Hành.
-              </p>
-              <div className="pt-2 flex items-center justify-between text-xs font-mono">
-                <a
-                  href="#/atelier"
-                  onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-                  className="text-rose-300 hover:underline flex items-center gap-1"
-                >
-                  <span>Phối đồ ngay</span>
-                  <ArrowRight className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Áo Tấc / Tay Thụ */}
-          <div className="bg-obsidian-800/80 rounded-m3-xl border border-white/10 p-6 backdrop-blur-organza space-y-4 hover:border-amber-400 transition-all duration-300 group flex flex-col justify-between">
-            <div className="w-full h-64 rounded-m3-lg bg-obsidian-900 overflow-hidden flex items-center justify-center p-2 border border-white/5 group-hover:scale-[1.02] transition-transform">
-              <AoTacArtwork className="w-full h-full max-h-56 drop-shadow-md" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold font-imperial text-white group-hover:text-amber-200 transition-colors">
-                  Áo Tấc / Tay Thụ
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-200">
-                  Đại Lễ
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Đại lễ phục trang nghiêm của quan viên và sĩ thứ. Ống tay rộng 35-50cm thụng buông vuông góc khi chắp tay hành lễ uy nghi.
-              </p>
-              <div className="pt-2 flex items-center justify-between text-xs font-mono">
-                <a
-                  href="#/atelier"
-                  onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-                  className="text-amber-300 hover:underline flex items-center gap-1"
-                >
-                  <span>Phối đồ ngay</span>
-                  <ArrowRight className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: Áo Tứ Thân Bắc Bộ */}
-          <div className="bg-obsidian-800/80 rounded-m3-xl border border-white/10 p-6 backdrop-blur-organza space-y-4 hover:border-emerald-400 transition-all duration-300 group flex flex-col justify-between">
-            <div className="w-full h-64 rounded-m3-lg bg-obsidian-900 overflow-hidden flex items-center justify-center p-2 border border-white/5 group-hover:scale-[1.02] transition-transform">
-              <TuThanArtwork className="w-full h-full max-h-56 drop-shadow-md" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold font-imperial text-white group-hover:text-emerald-200 transition-colors">
-                  Áo Tứ Thân & Nón Quai Thao
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200">
-                  Kinh Bắc
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Nét duyên dáng phụ nữ Bắc Bộ với 4 vạt vải thắt vạt lươn trước bụng, yếm đào cánh sen, thắt lưng lụa đào và nón quai thao trăng tròn.
-              </p>
-              <div className="pt-2 flex items-center justify-between text-xs font-mono">
-                <a
-                  href="#/atelier"
-                  onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-                  className="text-emerald-300 hover:underline flex items-center gap-1"
-                >
-                  <span>Phối đồ ngay</span>
-                  <ArrowRight className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 5: Áo Bà Ba Nam Bộ */}
-          <div className="bg-obsidian-800/80 rounded-m3-xl border border-white/10 p-6 backdrop-blur-organza space-y-4 hover:border-sky-400 transition-all duration-300 group flex flex-col justify-between">
-            <div className="w-full h-64 rounded-m3-lg bg-obsidian-900 overflow-hidden flex items-center justify-center p-2 border border-white/5 group-hover:scale-[1.02] transition-transform">
-              <BaBaArtwork className="w-full h-full max-h-56 drop-shadow-md" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold font-imperial text-white group-hover:text-sky-200 transition-colors">
-                  Áo Bà Ba & Khăn Rằn
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-200">
-                  Nam Bộ
-                </span>
-              </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                Biểu tượng phóng khoáng của miền sông nước Cửu Long. Cổ tròn hoặc tim nông, xẻ dọc chính giữa, hai túi vuông dưới vạt và khăn rằn mộc mạc.
-              </p>
-              <div className="pt-2 flex items-center justify-between text-xs font-mono">
-                <a
-                  href="#/atelier"
-                  onClick={(e) => { e.preventDefault(); onNavigate('atelier'); }}
-                  className="text-sky-300 hover:underline flex items-center gap-1"
-                >
-                  <span>Phối đồ ngay</span>
-                  <ArrowRight className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 6: AI Studio Call to Action */}
-          <div className="bg-gradient-to-br from-cyber-lime/10 via-obsidian-800/90 to-obsidian-900 rounded-m3-xl border border-cyber-lime/40 p-6 sm:p-8 backdrop-blur-organza flex flex-col justify-between space-y-4 shadow-cyber-glow">
-            <div className="space-y-3">
-              <div className="w-14 h-14 rounded-m3-md bg-cyber-lime/20 text-cyber-lime border border-cyber-lime/40 flex items-center justify-center">
-                <Sparkles className="w-7 h-7" />
-              </div>
-              <h3 className="text-2xl font-bold font-imperial text-white">
-                Sáng Tạo Bản Phối Bằng AI
-              </h3>
-              <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed font-sans">
-                Gemini AI phân tích bối cảnh, phối ngẫu lớp áo Cổ phục với áo khoác Cyber Organza và quần Cargo hiện đại với hệ thống bảo chứng văn hóa nghiêm ngặt.
-              </p>
-            </div>
-
-            <div className="space-y-2 pt-4">
-              <a
-                href="#/ai-studio"
-                onClick={(e) => { e.preventDefault(); onNavigate('ai-studio'); }}
-                className="w-full py-3.5 rounded-m3-full bg-cyber-lime hover:bg-lime-400 text-black font-bold text-xs sm:text-sm font-mono flex items-center justify-center gap-2 shadow-cyber-glow cursor-pointer transition-all hover:scale-[1.02]"
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                name: 'Áo Nhật Bình',
+                era: 'Hoàng Cung Triều Nguyễn',
+                role: 'Lễ phục bậc cao Hậu phi & Công chúa',
+                imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Empress%20Nam%20Phuong.jpg',
+                caption: 'Hoàng hậu Nam Phương mặc áo Nhật Bình và quấn khăn vành dây',
+                note: 'Cổ hình chữ nhật viền thêu bản lớn, dải ngũ sắc ngũ hành ở cửa tay áo và dây ngọc thao thắt ngực.'
+              },
+              {
+                name: 'Áo Tấc (Áo Tay Thụ)',
+                era: 'Triều Nguyễn (1802 – 1945)',
+                role: 'Đại lễ phục trang trọng của cả nam lẫn nữ',
+                imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Geedzi%C4%9Da%20festo%20en%20vila%C4%9Do%20apud%20Hue%2071.jpg',
+                caption: 'Áo Tấc trong nghi lễ truyền thống xứ Huế',
+                note: 'Hai ống tay thụng vuông vức bản rộng 30-50cm buông ngang vạt áo, khi chắp tay hành lễ tạo phong thái đoan trang.'
+              },
+              {
+                name: 'Áo Ngũ Thân Tay Chẽn',
+                era: 'Định chế Chúa Nguyễn & Vua Minh Mạng',
+                role: 'Thường phục chuẩn mực toàn dân',
+                imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Costumes%20Annamites%20Cambodgiens%20et%20Siamois%20(Vietnamese%20Cambodian%20Thai)%20c1870.jpg',
+                caption: 'Ký họa trang phục Áo Ngũ Thân Lập Lĩnh thế kỷ 19',
+                note: '5 thân vải ghép lại mang ý nghĩa ngũ thường, cổ đứng lập lĩnh 2-3cm, tay ôm gọn gàng thuận tiện làm việc.'
+              },
+              {
+                name: 'Áo Tứ Thân Kinh Bắc',
+                era: 'Đồng Bằng Bắc Bộ (Lý - Trần - Lê)',
+                role: 'Y phục dân gian & Liền chị quan họ',
+                imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Li%E1%BB%81n%20ch%E1%BB%8B%20quan%20h%E1%BB%8D%20-%20H%E1%BB%99i%20Lim%2C%20B%E1%BA%AFc%20Ninh.JPG',
+                caption: 'Liền chị quan họ Hội Lim trong áo Tứ Thân nón quai thao',
+                note: '4 thân vải mộc mạc thắt vạt lươn trước bụng, khéo léo để lộ áo yếm lụa đào và nón ba tầm quai thao che nắng.'
+              },
+              {
+                name: 'Áo Bà Ba Nam Bộ',
+                era: 'Vùng Sông Nước Nam Bộ (TK 19 – Nay)',
+                role: 'Y phục hào sảng, phóng khoáng phương Nam',
+                imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Peasant%20in%20%C3%A1o%20b%C3%A0%20ba.jpg',
+                caption: 'Phụ nữ Nam Bộ mộc mạc trong tà Áo Bà Ba',
+                note: 'Xẻ dọc giữa cúc áo, xẻ tà ngang hông, hai túi vuông vạt trước tiện lợi, kết hợp quần lụa đen và khăn rằn caro.'
+              },
+              {
+                name: 'Áo Dài Raglan Nữ Sinh',
+                era: 'Thập niên 1960 – Nay',
+                role: 'Quốc phục thanh xuân & học đường',
+                imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/2%20girls%20in%20aodai%20and%20a_tree.jpg',
+                caption: 'Nữ sinh trong tà áo dài trắng thướt tha ráp tay Raglan',
+                note: 'Bước đột phá ráp tay raglan chéo từ cổ áo xuống nách triệt tiêu nếp nhăn, ôm khít đường cong duyên dáng.'
+              }
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className="group rounded-2xl bg-white border border-stone-200 hover:border-amber-400 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
-                <span>Kích Hoạt Gemini AI Studio</span>
-                <ArrowRight className="w-4 h-4" />
-              </a>
-              <span className="text-[11px] font-mono text-neutral-400 text-center block">
-                Adaptive Multi-Model Router • Tự động xử lý Case 492
-              </span>
-            </div>
+                <div>
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <span className="absolute bottom-2.5 left-3 text-[10px] font-mono px-2 py-0.5 rounded bg-black/70 text-amber-200 border border-white/20">
+                      {item.role}
+                    </span>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        {item.era}
+                      </span>
+                    </div>
+                    <h4 className="font-imperial font-bold text-lg text-stone-900 group-hover:text-amber-800 transition-colors">
+                      {item.name}
+                    </h4>
+                    <p className="text-xs text-stone-600 leading-relaxed">
+                      {item.note}
+                    </p>
+                  </div>
+                </div>
+                <div className="px-4 pb-4 pt-1 border-t border-stone-100 text-[11px] text-stone-500 italic">
+                  * {item.caption}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ==================================================================== */}
+      {/* 3. 3 TRỤ CỘT CỦA NỀN TẢNG (THE 3 CORE PILLARS)                         */}
+      {/* ==================================================================== */}
+      <section className="relative z-10 py-12 px-4 max-w-6xl mx-auto border-t border-stone-200">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.5 }}
+          className="space-y-10"
+        >
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs font-mono uppercase text-amber-700 font-bold tracking-widest">
+              Sứ Mệnh & Giá Trị
+            </span>
+            <h2 className="font-imperial text-2xl sm:text-4xl font-bold text-stone-900">
+              Đưa Cổ Phục Bước Ra Khỏi Bảo Tàng
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+              Chúng tôi tin rằng di sản sống mãnh liệt nhất là khi được người trẻ tự hào mặc trong lễ kỷ yếu, ngày tết sum vầy, đám cưới truyền thống và những sự kiện thanh xuân.
+            </p>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-sm hover:shadow-md transition-all space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-center text-amber-800">
+                <Crown className="w-5 h-5" />
+              </div>
+              <h3 className="font-imperial font-bold text-lg text-stone-900">
+                1. Chuẩn Xác Sử Liệu & Điển Chế
+              </h3>
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Mọi kết cấu từ sống lưng Chính Trung (đạo ngay thẳng), 5 cúc Ngũ Thường (Nhân, Lễ, Nghĩa, Trí, Tín) đến tà áo Áo Tấc, Nhật Bình đều được căn cứ theo chính sử <em>Khâm Định Đại Nam Hội Điển Sự Lệ</em> và <em>Đại Nam Thực Lục</em>.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-sm hover:shadow-md transition-all space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-300 flex items-center justify-center text-blue-700">
+                <Layers className="w-5 h-5" />
+              </div>
+              <h3 className="font-imperial font-bold text-lg text-stone-900">
+                2. Xưởng Thử Đồ Bóc Tách Đa Tầng Lớp
+              </h3>
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Cơ chế phối đồ 6 tầng lớp thời gian thực: Quần lụa hạ y, Áo trung đơn lót trong, Áo chính, Áo khoác tân kỳ và Phụ kiện kiềng bạc, nón quai thao với chế độ quét X-Ray và thử gương mặt qua Camera.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-sm hover:shadow-md transition-all space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-center text-emerald-700">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <h3 className="font-imperial font-bold text-lg text-stone-900">
+                3. Tôn Trọng Văn Hóa & Phù Hợp Bối Cảnh
+              </h3>
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Hướng dẫn văn hóa chu đáo: phân biệt quy thức khép vạt người sống với nghi thức tống táng, giữ gìn nét riêng tránh nhầm lẫn với y phục lân bang, và tư vấn trang phục hài hòa theo dịp sự kiện.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ==================================================================== */}
+      {/* 4. HỆ THỐNG CÔNG CỤ TẠI VIBEPHỤC (4 CORE WORKFLOWS)                  */}
+      {/* ==================================================================== */}
+      <section className="relative z-10 py-12 px-4 max-w-6xl mx-auto border-t border-stone-200">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.5 }}
+          className="space-y-10"
+        >
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs font-mono uppercase text-amber-700 font-bold tracking-widest">
+              Bộ Công Cụ Sáng Tạo
+            </span>
+            <h2 className="font-imperial text-2xl sm:text-4xl font-bold text-stone-900">
+              Trải Nghiệm Toàn Diện Tại VibePhục
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-600">
+              Khám phá quy trình từ nghiên cứu văn sử, thử đồ trên ma-nơ-canh đến xuất thẻ chia sẻ mạng xã hội.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Module 1: Xưởng Phối Đồ 2D */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-white border border-stone-200 hover:border-amber-400 transition-all space-y-4 shadow-sm hover:shadow-md flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-center text-amber-800">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 font-bold">
+                    Trải Nghiệm Cốt Lõi
+                  </span>
+                </div>
+                <h3 className="font-imperial font-bold text-xl text-stone-900">
+                  Xưởng Phối Đồ Atelier & Mannequin Stage
+                </h3>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Trực tiếp ướm thử trang phục trên ma-nơ-canh vector với khả năng tùy biến màu sắc tơ lụa theo ngũ hành, phối đồ theo bối cảnh ba miền Bắc - Trung - Nam, và hỗ trợ tải ảnh khuôn mặt cá nhân hoặc chụp webcam.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigate('atelier')}
+                className="text-xs font-mono text-amber-700 hover:text-amber-900 font-bold flex items-center gap-1.5 transition-colors pt-2 cursor-pointer"
+              >
+                <span>Mở Xưởng Phối Đồ Ngay</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Module 2: Wiki Cổ Phục */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-white border border-stone-200 hover:border-amber-400 transition-all space-y-4 shadow-sm hover:shadow-md flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-center text-amber-800">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-stone-100 text-stone-800 font-bold">
+                    Bách Khoa Sử Liệu
+                  </span>
+                </div>
+                <h3 className="font-imperial font-bold text-xl text-stone-900">
+                  Wiki Cổ Phục & Tiến Trình Timelines
+                </h3>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Trang chuyên khảo toàn diện với dòng thời gian lịch sử, bách khoa giải phẫu 6 hệ trang phục kinh điển kèm hình ảnh tư liệu chuẩn xác từ Bảo tàng Dân tộc học và văn thư chính sử.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigate('wiki')}
+                className="text-xs font-mono text-amber-700 hover:text-amber-900 font-bold flex items-center gap-1.5 transition-colors pt-2 cursor-pointer"
+              >
+                <span>Mở Văn Thư Bách Khoa</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Module 3: Gemini AI Remix Studio */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-white border border-stone-200 hover:border-emerald-400 transition-all space-y-4 shadow-sm hover:shadow-md flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-center text-emerald-700">
+                    <Wand2 className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 font-bold">
+                    AI Giám Tuyển
+                  </span>
+                </div>
+                <h3 className="font-imperial font-bold text-xl text-stone-900">
+                  Gemini AI Heritage Remix Studio
+                </h3>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Cố vấn phong cách AI thông minh gợi ý bản phối trang phục di sản theo dịp cụ thể (Kỷ yếu học đường, Tết du xuân, Lễ cưới cổ truyền, Dạ hội Prom) kèm phân tích màu sắc và thơ xướng họa.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigate('ai-studio')}
+                className="text-xs font-mono text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1.5 transition-colors pt-2 cursor-pointer"
+              >
+                <span>Khám Phá Cùng Gemini AI</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Module 4: Digital Heritage Passport */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-white border border-stone-200 hover:border-blue-400 transition-all space-y-4 shadow-sm hover:shadow-md flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-300 flex items-center justify-center text-blue-700">
+                    <FileCheck2 className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 font-bold">
+                    Xuất Ảnh HD
+                  </span>
+                </div>
+                <h3 className="font-imperial font-bold text-xl text-stone-900">
+                  Bộ Xuất Thẻ Di Sản Số (Passport 9:16)
+                </h3>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Kết xuất thẻ Digital Heritage Passport chuẩn tỉ lệ dọc 9:16 cho Instagram Story và TikTok, đính kèm con dấu di sản, phân tích bảng màu Ngũ Hành và mã QR tra cứu lịch sử nhanh.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigate('atelier')}
+                className="text-xs font-mono text-blue-700 hover:text-blue-900 font-bold flex items-center gap-1.5 transition-colors pt-2 cursor-pointer"
+              >
+                <span>Tạo Thẻ Passport Ngay</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ==================================================================== */}
+      {/* 5. CALL TO ACTION CUỐI TRANG                                         */}
+      {/* ==================================================================== */}
+      <section className="relative z-10 pt-10 pb-16 px-4 max-w-4xl mx-auto text-center border-t border-stone-200">
+        <div className="p-8 sm:p-12 rounded-3xl bg-white border border-amber-300/80 space-y-6 shadow-md">
+          <Crown className="w-8 h-8 text-amber-600 mx-auto" />
+          <h2 className="font-imperial text-2xl sm:text-4xl font-bold text-stone-900">
+            Khám Phá & Sáng Tạo Phong Cách Cổ Phục Của Bạn
+          </h2>
+          <p className="text-xs sm:text-sm text-stone-600 max-w-xl mx-auto leading-relaxed">
+            Chọn tà áo truyền thống yêu thích, tra cứu nguồn gốc lịch sử hoặc sáng tạo bản phối đương đại cùng VibePhục Studio ngay bây giờ.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => onNavigate('atelier')}
+              className="px-8 py-3.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-imperial font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-amber-200" />
+              <span>Vào Xưởng Phối Đồ Ngay</span>
+            </button>
+            <button
+              onClick={() => onNavigate('wiki')}
+              className="px-6 py-3.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 font-mono font-bold text-xs flex items-center gap-2 transition-all border border-stone-300 cursor-pointer"
+            >
+              <BookOpen className="w-4 h-4 text-amber-700" />
+              <span>Mở Wiki Cổ Phục Toàn Thư</span>
+            </button>
+          </div>
         </div>
       </section>
 
     </div>
   );
 };
+
+export default OnboardingPage;
